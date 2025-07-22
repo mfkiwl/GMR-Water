@@ -7,13 +7,6 @@ load('MethodsSettings.mat')
 %% Inversion is carried out by five methods
 if string(settings.par) == "None"
     for tdatenum = start_date: end_date
-        RH_file = [settings.Out_path,'/RH_file/',settings.station_name,num2str(tdatenum),'RH_info.mat'];
-        if ~exist([settings.Out_path,'/RH_file'], "dir")
-            mkdir([settings.Out_path,'/RH_file'])
-        end
-
-        % start
-        disp([char(datetime(tdatenum,'ConvertFrom','datenum'))])
         inverse_code
     end
     % inverse modeling
@@ -28,9 +21,9 @@ if string(settings.par) == "None"
         end
         for tdatenum  = start_date+tlen/3 : tlen/3 : end_date+1-tlen/3
             temp_file = [temp_outdir,'/',num2str(round(tdatenum,10,'significant')),'.mat'];
-            % if exist(temp_file,"file")
-            %     continue
-            % end
+            if exist(temp_file,"file")
+                continue
+            end
             % load snr data
             st = tdatenum - tlen/3;
             et = tdatenum + 2*tlen/3;
@@ -119,6 +112,8 @@ if string(settings.par) == "None"
         if ~exist([settings.Out_path,'/Final_file'],"dir")
             mkdir([settings.Out_path,'/Final_file'])
         end
+        [~, n1, n2] = fileparts(final_file_name);
+        settings.Final_files{1} = [n1, n2];
         save(final_file_name, "Final_info")
     end
     % delete TropParameters file
@@ -132,15 +127,23 @@ if string(settings.par) == "None"
 else % par
     par = parpool(str2double(settings.par));
     parfor tdatenum = start_date: end_date
-        varNames = {'Time','System','BAND','PRN','ROC','MIN_elv','MAX_elv','MEAN_AZI','RH','trop_c'};
-        varTypes = {'datetime','string','string','double','double','double','double','double','double','double'};
+        RH_file = [settings.Out_path,'/RH_file/',settings.station_name,num2str(tdatenum),'RH_info.mat'];
+        if ~exist([settings.Out_path,'/RH_file'], "dir")
+            mkdir([settings.Out_path,'/RH_file'])
+        end
+
+        % start
+        disp([char(datetime(tdatenum,'ConvertFrom','datenum'))])
+
+        varNames = {'Time','System','BAND','PRN','ROC','MIN_elv','MAX_elv','MEAN_AZI','RH','trop_c', 'PNR'};
+        varTypes = {'datetime','string','string','double','double','double','double','double','double','double','double'};
         RH_info = table('Size',[0,length(varNames)],'VariableTypes',varTypes,'VariableNames',varNames);
         rid   = 0;
+        rid_all = 0;
 
         ms = load('MethodsSettings.mat','PNR','WinLSP');
         PNR = ms.PNR;
         WinLSP = ms.WinLSP;
-
         genTropParameters(tdatenum,staxyz,sta_asl,tide_range);
         for Meth_id = 1:5
             % load Data
@@ -275,6 +278,10 @@ else % par
                                             elv_win = elv(win_indx);
                                             azi_win = azi(win_indx);
                                             time_win = time(win_indx);
+                                            if max(time_win) - min(time_win) < 600
+                                                continue
+                                            end
+                                            rid_all = rid_all+1;
                                             [valid, RH_info_win] = snr2RH_info(elv_win, snr_win, azi_win, time_win, wave_length, tdatenum, ...
                                                 sta_asl, tide_range, ...
                                                 cur_sys, cur_band, cur_sat, PNR);
@@ -285,6 +292,10 @@ else % par
                                             end
                                         end
                                     else % No winlsp
+                                        % if max(time) - min(time) < 60*30
+                                        %     continue
+                                        % end
+                                        rid_all = rid_all+1;
                                         [valid, RH_info_arc] = snr2RH_info(elv, snr, azi, time, wave_length, tdatenum, ...
                                             sta_asl, tide_range, ...
                                             cur_sys, cur_band, cur_sat, PNR);
@@ -320,7 +331,7 @@ else % par
                             azi_o    = inverse_data{indx,3};
                             elv_o  = inverse_data{indx,4};
 
-                            if string(cur_sys) == "GLONASS"
+                            if string(cur_sys) == "GLONASS" && MFC.type == "triple"
                                 continue
                             end
                             [M,a,b,cur_band] = Get_combined_observations(Meth_id, cur_sys, inverse_data, indx, cur_sat);
@@ -346,6 +357,10 @@ else % par
                                     elv_win = elv(win_indx);
                                     azi_win = azi(win_indx);
                                     time_win = time(win_indx);
+                                    if max(time_win) - min(time_win) < 600
+                                        continue
+                                    end
+                                    rid_all = rid_all+1;
                                     [valid, RH_info_win] = mp2RH_info(elv_win, M_win, azi_win, time_win, a, b, tdatenum, ...
                                         sta_asl, tide_range, ...
                                         cur_sys, cur_band, cur_sat, Meth_id, PNR);
@@ -356,6 +371,10 @@ else % par
                                     end
                                 end
                             else
+                                if max(time) - min(time) < 60*15
+                                    continue
+                                end
+                                rid_all = rid_all+1;
                                 [valid, RH_info_arc] = mp2RH_info(elv, M, azi, time, a, b,  tdatenum, ...
                                     sta_asl, tide_range, ...
                                     cur_sys, cur_band, cur_sat, Meth_id, PNR);
@@ -416,6 +435,10 @@ else % par
                                         elv_win = elv(win_indx);
                                         azi_win = azi(win_indx);
                                         time_win = time(win_indx);
+                                        if max(time_win) - min(time_win) < 600
+                                            continue
+                                        end
+                                        rid_all = rid_all+1;
                                         [valid, RH_info_win] = mp2RH_info(elv_win, M_win, azi_win, time_win, a, b, tdatenum, ...
                                             sta_asl, tide_range, ...
                                             cur_sys, cur_band, cur_sat, Meth_id, PNR);
@@ -426,6 +449,10 @@ else % par
                                         end
                                     end
                                 else
+                                    if max(time) - min(time) < 60*15
+                                        continue
+                                    end
+                                    rid_all = rid_all+1;
                                     [valid, RH_info_arc] = mp2RH_info(elv, M, azi, time, a, b, tdatenum, ...
                                         sta_asl, tide_range, ...
                                         cur_sys, cur_band, cur_sat, Meth_id, PNR);
@@ -443,6 +470,14 @@ else % par
         end
         % save the RH_file
         parsave(RH_file,RH_info,'RH_info')
+        sprintf('out ratio: %.2f %',100-100*rid/rid_all)
+
     end
     delete(par)
+    % delete TropParameters file
+    fileList = dir('*TropParameters.mat');
+    for i = 1:length(fileList)
+        fileName = fileList(i).name;
+        delete(fileName);
+    end
 end

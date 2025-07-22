@@ -5,8 +5,8 @@ function [slvlr,lspy,cnt] = analyze(app,SNRdata,ahgt,ahgt_bounds,band,gnss_syste
 global Operation_settings
 plat = Operation_settings.station_l(2);
 plon = Operation_settings.station_l(1);
-elv_low  = Operation_settings.elv(1);    
-elv_high = Operation_settings.elv(2);   
+elv_low  = Operation_settings.elv(1);
+elv_high = Operation_settings.elv(2);
 slvlr = [];
 lspy = [];
 sinelv = sind(SNRdata(:,2));
@@ -15,11 +15,13 @@ SNR = sqrt(10.^(SNRdata(:,7)./10));
 deln = isnan(SNR(:,1)) == 1;
 SNR(deln,:) = [];
 sinelv(deln,:) = [];
+elv = SNRdata(:,2);
+elv(deln) = [];
 
 Lcar = get_wave_length(gnss_system, band, aa);
 
 % lack enough data
-if numel(sinelv)<5
+if numel(sinelv) < 5
     return
 end
 
@@ -35,20 +37,19 @@ end
 if tropd == 1
     % trop delay
     preh = reflh1(id);
-    hsfc  = hell-preh; 
-    if hsfc < hgtlim(1) && hsfc > hgtlim(2) 
+    hsfc  = hell-preh;
+    if hsfc < hgtlim(2) && hsfc > hgtlim(1)
         psfc = interp1(hgtlim,plim,hsfc,'linear');
         tmsfc = interp1(hgtlim,tmlim,hsfc,'linear');
-        esfc = interp1(hgtlim,elim,hsfc,'linear'); 
+        esfc = interp1(hgtlim,elim,hsfc,'linear');
 
-        theta = SNRdata(:,2);
 
         clear thetarefr
         curdt = datetime(tdatenum,'convertfrom','datenum');
         curjd = juliandate(curdt);
-        for jj = 1:numel(theta)
-            tau = trop_delay_tp(curjd,plat,hell,hsfc,theta(jj),pant,tmant,eant,ah,aw,lambda,psfc,tmsfc,esfc);
-            thetarefr(jj) = asind( sind(theta(jj)) + 0.5*tau/preh );
+        for jj = 1:numel(elv)
+            tau = trop_delay_tp(curjd,plat,hell,hsfc,elv(jj),pant,tmant,eant,ah,aw,lambda,psfc,tmsfc,esfc);
+            thetarefr(jj) = asind( sind(elv(jj)) + 0.5*tau/preh );
         end
 
         sinelv = sind(thetarefr).';
@@ -65,15 +66,14 @@ elseif tropd==2
     % refraction
     preh = reflh1(id);
     hsfc = hell-preh;
-    if hsfc > hgtlim(2) && hsfc < hgtlim(1)
+    if hsfc > hgtlim(1) && hsfc < hgtlim(2)
         psfc = interp1(hgtlim,plim,hsfc,'linear');
-        tsfc = interp1(hgtlim,tlim,hsfc,'linear'); 
+        tsfc = interp1(hgtlim,tlim,hsfc,'linear');
 
-        theta=SNRdata(:,2);
-        dele = (1/60) * 510 * psfc / ((9/5*tsfc+492) * 1010.16) .*cotd(theta+7.31./(theta+4.4)); 
+        dele = (1/60) * 510 * psfc / ((9/5*tsfc+492) * 1010.16) .*cotd(elv+7.31./(elv+4.4));
 
-        sinelv=sind(theta+dele);
-        thetarefr = theta+dele;
+        sinelv=sind(elv+dele);
+        thetarefr = elv+dele;
         [reflh1, id, psd, pks, dsnr, f] = snr2RH_lsp(sinelv, SNR, Lcar, hell, hgtlim);
         if isnan(pks)
             return
@@ -85,7 +85,7 @@ end
 trop_cor = preh - reflh1(id);
 
 % Validation
-if reflh1(id) < ahgt-ahgt_bounds || reflh1(id) > ahgt+ahgt_bounds || max(psd)<10*mean(pks(1:end-1))
+if reflh1(id) < ahgt-ahgt_bounds || reflh1(id) > ahgt+ahgt_bounds || max(psd)<4*mean(pks(1:end-1))
     nol1 = 1;
 end
 
@@ -160,7 +160,7 @@ if nol1 == 0
         slvlr(cnt,7) = NaN;
     end
     y = SNR-dsnr;
-    slvlr(cnt,8) = mean(y, 'omitnan');                               % mean mag. tSNR
+    slvlr(cnt,8) = mean(y, 'omitnan');                       % mean mag. tSNR
     slvlr(cnt,9) = max(psd);                                  % the peak
     slvlr(cnt,10)= var(SNR);                               % the variance
     try

@@ -2,25 +2,39 @@ function [valid, RH_info] = mp2RH_info(elv, M, azi, time, a, b,  tdatenum, ...
     sta_asl, tide_range, ...
     cur_sys, cur_band, cur_sat, Meth_id, PNR)
 
-varNames = {'Time','System','BAND','PRN','ROC','MIN_elv','MAX_elv','MEAN_AZI','RH','trop_c'};
-varTypes = {'datetime','string','string','double','double','double','double','double','double','double'};
+varNames = {'Time','System','BAND','PRN','ROC','MIN_elv','MAX_elv','MEAN_AZI','RH','trop_c','PNR'};
+varTypes = {'datetime','string','string','double','double','double','double','double','double','double', 'double'};
 RH_info = table('Size',[0,length(varNames)],'VariableTypes',varTypes,'VariableNames',varNames);
 
 load([num2str(tdatenum), 'TropParameters.mat'])
+load('MethodsSettings.mat','MFC','SFC')
 
-if numel(M) < 5
+valid = 1;
+if max(elv)-min(elv) < 5
     valid = 0;
     RH_info = [];
     return
 end
 sinelv = sind(elv);
-if Meth_id == 5 % Remove the ionosphere error
-    [p, ~, mu] = polyfit(sinelv, M, 10);
-    m_fit = polyval(p, sinelv, [], mu);
+if Meth_id == 5 || MFC.type == "dual"% Remove the ionosphere error
+    % M = movmean(M, 2);
+    [p, s, mu] = polyfit(time, M, 9);
+    m_fit = polyval(p, time, [], mu);
     M = M-m_fit;
+
+    % M = movmean(M, 3);
+    % [p, s, mu] = polyfit(sinelv, M, 20);
+    % m_fit = polyval(p, sinelv, [], mu);
+    % M = M-m_fit;
+    % p = 1e-4;
+    % spline_fit = csaps(time, M, p);
+    % y_fit = fnval(spline_fit, time);
+    % M = M - y_fit;
 end
+% [M, w] = smoothdata(M,'movmean',3);
+
 [refl_h, id, psd, pks] = mp2RH_lsp(sinelv, M, hell, hgtlim, a, b);
-if isnan(pks)
+if isempty(pks)
     valid = 0;
     RH_info = [];
     return
@@ -35,21 +49,22 @@ if hsfc > hgtlim(1) && hsfc < hgtlim(2)
     tmsfc = interp1(hgtlim,tmlim,hsfc,'linear');
     esfc = interp1(hgtlim,elim,hsfc,'linear');
 
-    % dele = (1/60) * 510 * psfc / ((9/5*tsfc+492) * 1010.16) .*cotd(elv+7.31./(elv+4.4));
-    % sinelv = sind(elv + dele);
-    % elv = elv+dele;
+    % refraction
+    dele = (1/60) * 510 * psfc / ((9/5*tsfc+492) * 1010.16) .*cotd(elv+7.31./(elv+4.4));
+    elv = elv+dele;
 
+    % delay
     theta = elv;
     thetarefr = [];
     for jj = 1:numel(theta)
         tau = trop_delay_tp(curjd,lla(1),hell,hsfc,theta(jj),pant,tmant,eant,ah,aw,lambda,psfc,tmsfc,esfc);
-        thetarefr(jj) = asind( sind(theta(jj)) + 0.5*tau/pre_h );
+        thetarefr(jj) =  theta(jj) + asind( 0.5*tau/pre_h );
     end
     sinelv = sind(thetarefr).';
 
     [refl_h, id, psd, pks] = mp2RH_lsp(sinelv, M, hell, hgtlim, a, b);
 
-    if isnan(pks)
+    if isempty(pks)
         valid = 0;
         RH_info = [];
         return
@@ -58,10 +73,21 @@ end
 cur_rh = refl_h(id);  % Final rh
 trop_c = cur_rh - pre_h; % Tropospheric correction
 
-valid = 1;
-if  cur_rh > sta_asl-tide_range(1) || cur_rh < sta_asl-tide_range(2) || max(psd)<PNR *mean(psd)
-    valid = 0;
+% QC
+if valid
+    % if pks(end) < 2
+    %     valid = 0;
+    % end
+    % if numel(pks) > 1
+    %     if pks(end)/pks(end-1) < 1.5
+    %         valid = 0;
+    %     end
+    % end
+    if  cur_rh > sta_asl-tide_range(1) || cur_rh < sta_asl-tide_range(2) || max(psd)<PNR *mean(psd)
+        valid = 0;
+    end
 end
+
 
 if valid == 1
     Time = datetime(tdatenum + mean(time)/86400, 'ConvertFrom', 'datenum');       % datenum
@@ -72,8 +98,18 @@ if valid == 1
         /(time(end)-time(1)));                   % tan(th)/dth/dt :rate of change
     MIN_elv = min(elv);                          % THETA MIN
     MAX_elv = max(elv);                          % THETA MAX
-    MEAN_AZI = nanmean(azi);                     % MEAN AZI
+    MEAN_AZI = mean(azi,'omitnan');              % MEAN AZI
     RH = cur_rh;                                 % slvl
-    RH_info = table(Time,System,BAND,PRN,ROC,MIN_elv,MAX_elv,MEAN_AZI,RH,trop_c);
+    PNR = max(psd) / mean(psd);
+    RH_info = table(Time,System,BAND,PRN,ROC,MIN_elv,MAX_elv,MEAN_AZI,RH,trop_c, PNR);
+
+    % fig = figure('Visible', 'off');
+    % plot(refl_h, psd, 'LineWidth',1.5, 'Color', 'black')
+    % title([cur_sys, cur_band, '  PRN',num2str(cur_sat),'  PNR=',num2str(max(psd) / mean(psd))])
+    % save_path = [pwd, '/pic/',cur_sys, cur_band, num2str(cur_sat), '.png']; 
+    % saveas(fig, save_path);
+    % close(fig);
+else
+    % disp('d')
 end
 end

@@ -19,12 +19,15 @@ for s = 1:4
     % Time series
     if ~isempty(time_tide)
         nexttile([1,4])
-        plot(time_tide,sea_level_tide,'Color',[0.3, 0.3, 0.3],'LineWidth',0.5,'DisplayName', 'Tide gauge')
+        plot(time_tide,sea_level_tide,'Color',[0.3, 0.3, 0.3],'LineWidth',1,'DisplayName', 'Tide gauge')
     else
         nexttile([1,5])
     end
     hold on
-    gscatter(time, sea_level_ir,group,colors,'+o*xhs', 5,5)
+    h = gscatter(time, sea_level_ir,group,colors,'+o*xhs', 7,5);
+    for i = 1:length(h)
+        h(i).LineWidth = 2;
+    end
     if ~isempty(time_tide)
         legend(["Tide gauge";unique(band)])
     else
@@ -41,6 +44,7 @@ for s = 1:4
     title(sys)
     hold off
     box on
+    set(gca, 'LineWidth', 2);
     xlim([min(time), max(time)+1])
 
     % RMSE
@@ -67,7 +71,7 @@ for s = 1:4
     if ~isempty(time_tide)
         nexttile([1,1])
         b = barh(RMSE*100,0.5, 'FaceColor',[0.3010 0.7450 0.9330],'EdgeColor',[0.3010 0.7450 0.9330],'BarWidth',0.9, 'LineWidth', 2);
-        set(gca, 'YTickLabel', bands)
+        set(gca, 'YTickLabel', bands, 'LineWidth', 2)
         if s == 4
             xlabel('RMSE(cm)')
         elseif s == 1
@@ -83,7 +87,7 @@ for s = 1:4
 
     % Average daily inversion points
     nexttile([1,1])
-    data = valid_num/(end_date-start_date+1);
+    data = valid_num./(end_date-start_date+1);
     labels = bands;
     total = sum(data);
     h = pie(data);

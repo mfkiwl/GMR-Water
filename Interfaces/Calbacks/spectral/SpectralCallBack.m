@@ -100,7 +100,8 @@ while tdatenum < enddate
             band = system.Properties.VariableNames(l+4);
             [hang,~] = size(system);
             nan_all = nan(hang ,2);
-            snrfile = [table2array(system(:,1)),table2array(system(:,4)),table2array(system(:,3)),table2array(system(:,2)),nan_all,table2array(system(:,band))];
+            snrfile = [table2array(system(:,1)),table2array(system(:,4)),...
+                table2array(system(:,3)),table2array(system(:,2)),nan_all,table2array(system(:,band))];
 
             [slvlr,lspy] = analyzesnr_fun(app,snrfile,tdatenum,tropd,decimate,...
                 tempsnr,templsp,axes_dsnr,axes_lsp,gnss_system,cell2mat(band));

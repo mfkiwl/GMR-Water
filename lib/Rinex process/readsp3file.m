@@ -1,22 +1,23 @@
-function [txyz,xyz] = readsp3file(sp3str)
+function [txyz, xyz, clk] = readsp3file(sp3str)
 
 % this function reads an sp3 orbit file and outputs timex and x,y,z
 % positions of satellites
 
 fid=fopen(sp3str);
 
-tline=fgets(fid);
+tline = fgets(fid);
 while ~strcmp(tline(1),'*')
     tline=fgets(fid);
 end
 
-txyz=NaN(86400/(5*60)+1,1); % 5 mins would be max so preallocating for speed
-xyz=NaN(138,numel(txyz),3);
+txyz = NaN(86400/(5*60)+1,1); % 5 mins would be max so preallocating for speed
+xyz  = NaN(150,numel(txyz),3);
+clk  = NaN(150,numel(txyz));
 tt=0;
 while ~feof(fid)
     
-    tt=tt+1;
-    txyz(tt)=datenum(str2double(tline(4:7)),str2double(tline(9:10)),str2double(tline(12:13)),...
+    tt = tt+1;
+    txyz(tt) = datenum(str2double(tline(4:7)),str2double(tline(9:10)),str2double(tline(12:13)),...
         str2double(tline(15:16)),str2double(tline(18:19)),str2double(tline(21:31)));
     tline=fgets(fid);
     while strcmp(tline(1),'*')==0 && ~feof(fid)
@@ -32,7 +33,8 @@ while ~feof(fid)
             tline=fgets(fid);
             continue
         end
-        xyz(satidt,tt,:)=[str2double(tline(5:18)) str2double(tline(19:32)) str2double(tline(33:46))];
+        xyz(satidt,tt,:) = [str2double(tline(5:18)) str2double(tline(19:32)) str2double(tline(33:46))];
+        clk(satidt,tt) = str2double(tline(47:end));
         tline=fgets(fid);
     end
 end

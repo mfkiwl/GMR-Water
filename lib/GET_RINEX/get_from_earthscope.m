@@ -21,7 +21,7 @@ if exist("par_settings", "var")
         stryr = char(datetime(curdt,'format','yy'));
         stryrl = char(datetime(curdt,'format','yyyy'));
 
-        if Rinex_version == "RIENX3"
+        if Rinex_version == "RINEX3"
             url1 = strcat('https://gage-data.earthscope.org/archive/gnss/rinex3/obs/',stryrl,'/',strday,'/');
             url2 = strcat( upper(station_name),'00',ISO_short,'_R_',stryrl,strday,'0000_01D_15S_MO.rnx.gz');
         elseif Rinex_version == "RINEX2"
@@ -36,7 +36,7 @@ if exist("par_settings", "var")
 
         curlCommand = sprintf('curl -H "Authorization: Bearer %s" -o %s %s', api_key, url2, fileurl);
         system(curlCommand);
-        command = sprintf('"7z.exe" x "%s" -o"%s"', url2, pwd);
+        command = sprintf('"7z.exe" x "%s" -o"%s"', url2, target_dir);
         system(command);
         delete(url2)
     end
@@ -49,7 +49,7 @@ else
         stryr = char(datetime(curdt,'format','yy'));
         stryrl = char(datetime(curdt,'format','yyyy'));
 
-        if Rinex_version == "RIENX3"
+        if Rinex_version == "RINEX3"
             url1 = strcat('https://gage-data.earthscope.org/archive/gnss/rinex3/obs/',stryrl,'/',strday,'/');
             url2 = strcat( upper(station_name),'00',ISO_short,'_R_',stryrl,strday,'0000_01D_15S_MO.rnx.gz');
         elseif Rinex_version == "RINEX2"
@@ -64,7 +64,7 @@ else
 
         curlCommand = sprintf('curl -H "Authorization: Bearer %s" -o %s %s', api_key, url2, fileurl);
         system(curlCommand);
-        command = sprintf('"7z.exe" x "%s" -o"%s"', url2, pwd);
+        command = sprintf('"7z.exe" x "%s" -o"%s"', url2, target_dir);
         system(command);
         delete(url2)
     end

@@ -27,16 +27,10 @@ while tdatenum < enddate
     stryr = char(datetime(curdt,'format','yy'));
     stryrl = char(datetime(curdt,'format','yyyy'));
 
-    % rinex version
-    if Operation_settings.rinex_version == 'rinex 2'
-        rinex_option = 1;
-    elseif Operation_settings.rinex_version == 'rinex 3'
-        rinex_option = 2;
-    end
     d.Message = strcat('Date: ', char(curdt),  '  Rinex version:', Operation_settings.rinex_version(end));
 
     % for the different way of naming
-    if rinex_option == 1
+    if Operation_settings.rinex_version == 'rinex 2'
         if exist([datastr, '/', station, strday, '0.', stryr, 'o'], 'file') == 2 % exist
             obsstr = [datastr, station, strday, '0.', stryr, 'o'];
         else
@@ -44,7 +38,7 @@ while tdatenum < enddate
                 'warning');
             continue
         end
-    elseif rinex_option == 2
+    elseif Operation_settings.rinex_version == 'rinex 3'
         dts = sprintf('%02s',Operation_settings.dt);
         if exist([datastr, upper(station), '00', Operation_settings.station_belong, '_R_', stryrl, strday, '0000_01D_', num2str(dts), 'S_MO.rnx'], 'file') == 2
             obsstr = [datastr, upper(station), '00', Operation_settings.station_belong, '_R_', stryrl, strday, '0000_01D_', num2str(dts), 'S_MO.rnx'];
@@ -76,9 +70,9 @@ while tdatenum < enddate
     end
 
     % For the different rinex version
-    if rinex_option == 1    % for RINEX2
+    if Operation_settings.rinex_version == 'rinex 2'    % for RINEX2
         [snr_azi, snr_all, snr_data] = rinex2snrfile_1(obsstr, sp3str, d);
-    elseif rinex_option == 2 % for RINEX3
+    elseif Operation_settings.rinex_version == 'rinex 3' % for RINEX3
         [snr_azi, snr_all, snr_data] = rinex2snrfile_2(obsstr, sp3str, d, all_days);
     end
 

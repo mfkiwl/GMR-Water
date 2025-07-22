@@ -112,7 +112,7 @@ if nargin < 1  % example for SCOA
     settings.methods = [1,0,0,0,0];
 
     % process flow
-    settings.flow = [0 0 1 1];
+    settings.flow = [1 1 1 1];
     settings.par  = 'None';
 
     % download rinex file

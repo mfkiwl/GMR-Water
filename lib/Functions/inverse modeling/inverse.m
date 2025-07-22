@@ -5,7 +5,12 @@ function [hinit,xinit,sfacspre,sfacsjs,consts_out,roughout] = inverse(dt,snrfile
 glonasswlen = load('glonasswlen.mat');
 glonasswlen = glonasswlen.glonasswlen;
 
-load('MethodsSettings.mat','PNR','WinLSP')
+if exist('MethodsSettings.mat','file')
+    load('MethodsSettings.mat','PNR','WinLSP')
+else
+    PNR = 3;
+    WinLSP.Enable = 0;
+end
 
 if numel(varargin) ~= 0
     app = varargin{1};
@@ -29,13 +34,12 @@ dtdv = dt/86400;
 %% INVERSE based on spectral
 cursat = snrfile(1,1); % sat number
 stind = 1;
-s1ind = 0;
+s_ind = 0;
 
 sinelv_all = [];
 snr_all = [];
 time_all = [];
 satPRN_all = [];
-antno_all = [];
 
 if snrfile(2,2) - snrfile(1,2) < 0 % Descending order
     fwd2 = 0;
@@ -114,28 +118,23 @@ for ind = 2:size(snrfile,1)
                                 [valid, RH_info_win] = snr2RH_info(elv_win, snr_win, azi_win, time_win, wave_length, floor(tdatenum), ...
                                     hell, hgtlim, ...
                                     'None', 'None', 0, PNR);
-                            end
-                            if valid
-                                s1ind = s1ind + 1;
-                                hinit(s1ind) = RH_info_win.RH;
-                                xinit(s1ind) = mean(time_win); % timing of spectral analysis estimates
 
-                                snr_datatmp = snrfile(stind:ind-1, :);
-                                tanthter(s1ind) = RH_info_win.ROC * 86400;
-                                siteinit(s1ind) = snr_datatmp(end,10);
+                                if valid
+                                    s_ind = s_ind + 1;
+                                    hinit(s_ind) = RH_info_win.RH;
+                                    xinit(s_ind) = mean(time_win); % timing of spectral analysis estimates
+                                    tanthter(s_ind) = RH_info_win.ROC * 86400;
+                                end
                             end
                         else
                             [valid, RH_info] = snr2RH_info(elv, snr, azi, time, wave_length, floor(tdatenum), ...
                                 hell, hgtlim, ...
                                 'None', 'None', 0, PNR);
                             if valid
-                                s1ind = s1ind + 1;
-                                hinit(s1ind) = RH_info.RH;
-                                xinit(s1ind) = mean(time); % timing of spectral analysis estimates
-
-                                snr_datatmp = snrfile(stind:ind-1, :);
-                                tanthter(s1ind) = RH_info.ROC * 86400;
-                                siteinit(s1ind) = snr_datatmp(end,10);
+                                s_ind = s_ind + 1;
+                                hinit(s_ind) = RH_info.RH;
+                                xinit(s_ind) = mean(time); % timing of spectral analysis estimates
+                                tanthter(s_ind) = RH_info.ROC * 86400;
                             end
                         end
                         
@@ -164,12 +163,11 @@ if min(time_all) > tdatenum+tlen/3 || numel(xinit) < 2
 end
 
 meanhgts = 0;
-tmpinit = [xinit.' hinit.' tanthter.' siteinit.']; % time, reflect h
+tmpinit = [xinit.' hinit.' tanthter.']; % time, reflect h
 tmpinit = sortrows(tmpinit,1); % sort by time
 xinit = tmpinit(:,1);
 hinit = tmpinit(:,2);
 tanthter = tmpinit(:,3);
-siteinit = tmpinit(:,4);
 % get rid of outlines by 3*sigma
 hsmooth = smoothdata(hinit,'movmean',5);
 diff1 = abs(hsmooth-hinit);
@@ -178,7 +176,6 @@ delete = diff1(:,1)>stdfac*std1; % 2 for 4 stations
 hinit(delete)=[];
 xinit(delete)=[];
 tanthter(delete)=[];
-siteinit(delete)=[];
 
 if largetides == 0
     indt = time_all(:)>tdatenum+tlen/3 & time_all(:)<tdatenum+2*tlen/3;

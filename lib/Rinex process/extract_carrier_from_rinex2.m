@@ -5,10 +5,10 @@ function [carrier_data] = extract_carrier_from_rinex2(obsstr, sp3str, elv_lims, 
 
 % THIS CODE TAKES RINEX FILES '.yyo' AND SATELLITE ORBIT DATA '.sp3'
 % AND THEN OUTPUTS SOME ORAGNISED SNR DATA TO ANALYZE FOR
-% REFLECTOMETRY（输出有组织的SNR数据）
-% WITH ELEVATION AND AZIMUTH ANGLE INPUTS（高度、方位角输入）
+% REFLECTOMETRY
+% WITH ELEVATION AND AZIMUTH ANGLE INPUTS
 
-% INTERPOLATING SP3 FILES PROPERLY IS SO IMPORTANT（正确的插值sp3）
+% INTERPOLATING SP3 FILES PROPERLY IS SO IMPORTANT
 % I HAVE HAD SOME ISSUES WITH DIFFERENT SP3 FILES SO BE CAREFUL
 % TRY USING DIFFERENT ONES FOR THE SAME TIME PERIOD AND THEN LOOK AT
 % RESIDUALS
@@ -34,13 +34,13 @@ satmatr={'G01';'G02';'G03';'G04';'G05';'G06';'G07';'G08';'G09';...
     'E01';'E02';'E03';'E04';'E05';'E06';'E07';'E08';'E09';...
     'E10';'E11';'E12';'E13';'E14';'E15';'E16';'E17';'E18';'E19';...
     'E20';'E21';'E22';'E23';'E24';'E25';'E26';'E27';'E28';'E29';...
-    'E30';'E31';'E32';'E33';'E34';'E35';'E36'}; %卫星编号
+    'E30';'E31';'E32';'E33';'E34';'E35';'E36'};
 
-fid=fopen(obsstr);
+fid = fopen(obsstr);
 
-tline=fgets(fid);%fgets 读取文件中的行并且保留换行符
+tline = fgets(fid);%fgets
 endnow=0;
-disp('reading rinex header')
+% disp('reading rinex header')
 while endnow==0 % find end of header
     tline = fgets(fid);
     obsq = strfind(tline,'# / TYPES OF OBSERV');%查找观测值类型 找到S1与S2
@@ -58,7 +58,7 @@ while endnow==0 % find end of header
             obsl = 5;
         end
         clear s1pos s2pos
-        for ii=1:numobs
+        for ii = 1:numobs
             if ii==10 || ii==19
                 tline=fgets(fid);
             end
@@ -85,7 +85,7 @@ while endnow==0 % find end of header
             end
         end
     end
-    endq = strfind(tline,'END OF HEADER');%头文件结束
+    endq = strfind(tline,'END OF HEADER');
     if size(endq,1) > 0
         endnow = 1;
         tline=fgets(fid);
@@ -188,52 +188,52 @@ while ~feof(fid)%判断文件是否结束
         if numel(tline) >= (s2pos - i*5 - 1)*16 + 14
             s2data(cursecs+1,satind) = str2double(tline((s2pos-i*5-1)*16+1:(s2pos-i*5-1)*16+14));
         end
-         % getting s5
-         if exist('s5pos', 'var')
-        while s5pos > mult5
-            i=i+1;
-            mult5=5*(i+1);
-            tline=fgets(fid);
+        % getting s5
+        if exist('s5pos', 'var')
+            while s5pos > mult5
+                i=i+1;
+                mult5=5*(i+1);
+                tline=fgets(fid);
+            end
+
+            if numel(tline) >= (s5pos - i*5 - 1)*16 + 14
+                s5data(cursecs+1,satind) = str2double(tline((s5pos-i*5-1)*16+1:(s5pos-i*5-1)*16+14));
+            end
         end
-         
-        if numel(tline) >= (s5pos - i*5 - 1)*16 + 14
-            s5data(cursecs+1,satind) = str2double(tline((s5pos-i*5-1)*16+1:(s5pos-i*5-1)*16+14));
-        end
-         end
         % getting s6
         if exist('s6pos', 'var')
-        while s6pos > mult5
-            i=i+1;
-            mult5=5*(i+1);
-            tline=fgets(fid);
-        end
-        
-        if numel(tline) >= (s6pos - i*5 - 1)*16 + 14
-            s6data(cursecs+1,satind) = str2double(tline((s6pos-i*5-1)*16+1:(s6pos-i*5-1)*16+14));
-        end
+            while s6pos > mult5
+                i=i+1;
+                mult5=5*(i+1);
+                tline=fgets(fid);
+            end
+
+            if numel(tline) >= (s6pos - i*5 - 1)*16 + 14
+                s6data(cursecs+1,satind) = str2double(tline((s6pos-i*5-1)*16+1:(s6pos-i*5-1)*16+14));
+            end
         end
         % getting s7
         if exist('s7pos', 'var')
-        while s7pos > mult5
-            i=i+1;
-            mult5=5*(i+1);
-            tline=fgets(fid);
+            while s7pos > mult5
+                i=i+1;
+                mult5=5*(i+1);
+                tline=fgets(fid);
+            end
+            if numel(tline) >= (s7pos - i*5 - 1)*16 + 14
+                s7data(cursecs+1,satind) = str2double(tline((s7pos-i*5-1)*16+1:(s7pos-i*5-1)*16+14));
+            end
         end
-        if numel(tline) >= (s7pos - i*5 - 1)*16 + 14
-            s7data(cursecs+1,satind) = str2double(tline((s7pos-i*5-1)*16+1:(s7pos-i*5-1)*16+14));
+        % getting s8
+        if exist('s8pos', 'var')
+            while s8pos > mult5
+                i=i+1;
+                mult5=5*(i+1);
+                tline=fgets(fid);
+            end
+            if numel(tline) >= (s8pos - i*5 - 1)*16 + 14
+                s8data(cursecs+1,satind) = str2double(tline((s8pos-i*5-1)*16+1:(s8pos-i*5-1)*16+14));
+            end
         end
-        end
-          % getting s8
-          if exist('s8pos', 'var')
-        while s8pos > mult5
-            i=i+1;
-            mult5=5*(i+1);
-            tline=fgets(fid);
-        end
-        if numel(tline) >= (s8pos - i*5 - 1)*16 + 14
-            s8data(cursecs+1,satind) = str2double(tline((s8pos-i*5-1)*16+1:(s8pos-i*5-1)*16+14));
-        end
-          end
         while i~=obsl
             tline=fgets(fid);
             i=i+1;
@@ -253,10 +253,10 @@ for satind=1:92% 遍历所有卫星
 
     s1datat=squeeze(s1data(:,satind));%squeeze 删除长度为1的维度  提取一列，即一个卫星的数据
     s2datat=squeeze(s2data(:,satind));
-     s5datat=squeeze(s5data(:,satind));
-     s6datat=squeeze(s6data(:,satind));
-     s7datat=squeeze(s7data(:,satind));
-     s8datat=squeeze(s8data(:,satind));
+    s5datat=squeeze(s5data(:,satind));
+    s6datat=squeeze(s6data(:,satind));
+    s7datat=squeeze(s7data(:,satind));
+    s8datat=squeeze(s8data(:,satind));
     secs=find(~isnan(s1datat(:)) | ~isnan(s2datat(:))| ~isnan(s5datat(:))| ~isnan(s6datat(:))| ~isnan(s7datat(:))|~isnan(s8datat(:)));% 参考时刻
     s1datat=s1datat(secs);
     s2datat=s2datat(secs);% 只保留参考时刻的数据（每15秒一个数据）
@@ -286,15 +286,15 @@ for satind=1:92% 遍历所有卫星
             snrdatat(ind,2) = elv;
             snrdatat(ind,3) = azi;
             snrdatat(ind,4) = secs(tt)-1;
-          % snrdatat(ind,5) = NaN;
-          %   snrdatat(ind,6) = NaN;
+            % snrdatat(ind,5) = NaN;
+            %   snrdatat(ind,6) = NaN;
             snrdatat(ind,5) = s1datat(tt);
             snrdatat(ind,6) = s2datat(tt);
             snrdatat(ind,7) = s5datat(tt);
             snrdatat(ind,8) = s6datat(tt);
             snrdatat(ind,9) = s7datat(tt);
             snrdatat(ind,10) = s8datat(tt);
-            
+
         end
     end
     carrier_data = [carrier_data;snrdatat];
@@ -321,23 +321,32 @@ carrier_data = snr_struct;
 
 % 为 GPS 系统添加列头信息，并转换为表格
 if ~isempty(carrier_data.GPS)
+    temp = carrier_data.GPS(:, 3);
+    carrier_data.GPS(:, 3) = carrier_data.GPS(:, 4);
+    carrier_data.GPS(:, 4) = temp;
     carrier_data.GPS = array2table(carrier_data.GPS, ...
-        'VariableNames', {'GPS_data_prn_num', 'GPS_data_time', 'GPS_elv', ...
-                          'GPS_azi', 'L1', 'L2', 'L5', 'L6', 'L7', 'L8'});
+        'VariableNames', {'GPS_data_prn_num', 'GPS_data_time', 'GPS_azi', ...
+        'GPS_elv', 'L1', 'L2', 'L5', 'L6', 'L7', 'L8'});
 end
 % 为 GLONASS 和 Galileo 数据可按需要添加列头信息
 % 此处展示为 GLONASS 示例
 if ~isempty(carrier_data.GLONASS)
+    temp = carrier_data.GLONASS(:, 3);  
+    carrier_data.GLONASS(:, 3) = carrier_data.GLONASS(:, 4);  
+    carrier_data.GLONASS(:, 4) = temp;
     carrier_data.GLONASS = array2table(carrier_data.GLONASS, ...
-        'VariableNames', {'GLONASS_data_prn_num', 'GLONASS_data_time', 'GLONASS_elv', ...
-                          'GLONASS_azi', 'L1', 'L2', 'L5', 'L6', 'L7', 'L8'});
+        'VariableNames', {'GLONASS_data_prn_num', 'GLONASS_data_time', 'GLONASS_azi', ...
+        'GLONASS_elv', 'L1', 'L2', 'L5', 'L6', 'L7', 'L8'});
 end
 
 % 同理为 Galileo 数据添加列头信息
 if ~isempty(carrier_data.GALILEO)
+    temp = carrier_data.GALILEO(:, 3);  
+    carrier_data.GALILEO(:, 3) = carrier_data.GALILEO(:, 4);  
+    carrier_data.GALILEO(:, 4) = temp;
     carrier_data.GALILEO = array2table(carrier_data.GALILEO, ...
-        'VariableNames', {'GALILEO_data_prn_num', 'GALILEO_data_time', 'GALILEO_elv', ...
-                          'GALILEO_azi', 'L1', 'L2', 'L5', 'L6', 'L7', 'L8'});
+        'VariableNames', {'GALILEO_data_prn_num', 'GALILEO_data_time', 'GALILEO_azi', ...
+        'GALILEO_elv', 'L1', 'L2', 'L5', 'L6', 'L7', 'L8'});
 end
 
 

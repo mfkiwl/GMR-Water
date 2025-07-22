@@ -5,8 +5,14 @@
 
 startdate = datenum(start_time);
 enddate   = datenum(end_time);
-station_info_all = struct('azi_lim',azi_lim,'elv_lim',elv_lim,'azi_mask',azi_mask, ...
-    'sta_lon',sta_lon,'sta_lat',sta_lat,'staxyz',staxyz,'station_belong',station_belong);
+if exist("azi_lim2","var")
+    station_info_all = struct('azi_lim',azi_lim,'elv_lim',elv_lim,'azi_mask',azi_mask, ...
+        'azi_lim2',azi_lim2,'elv_lim2',elv_lim2,'azi_mask2',azi_mask2, ...
+        'sta_lon',sta_lon,'sta_lat',sta_lat,'staxyz',staxyz,'station_belong',station_belong);
+else
+    station_info_all = struct('azi_lim',azi_lim,'elv_lim',elv_lim,'azi_mask',azi_mask, ...
+        'sta_lon',sta_lon,'sta_lat',sta_lat,'staxyz',staxyz,'station_belong',station_belong);
+end
 % LOAD SNR DATA
 if string(settings.par) == "None"
     for tdatenum = startdate: enddate
@@ -80,83 +86,223 @@ if ~exist(sp3str,"file")
 end
 
 % For the different rinex version
-
+is_pseudorange = 0;
+is_carrier = 0;
 if sum(settings.methods(1:2)) ~= 0 % For SNR
-    if rinex_option == 1    % for RINEX2
-        [snr_azi, snr_all, snr_data] = Batch_rinex2snrfile_1(obsstr, sp3str, station_info_all);
-    elseif rinex_option == 2 % for RINEX3
-        [snr_azi, snr_all ,snr_data] = Batch_rinex2snrfile_2(obsstr, sp3str, station_info_all, settings);
+    if numel(fieldnames(station_info_all)) ~= 10
+        if rinex_option == 1    % for RINEX2
+            [snr_azi, snr_all, snr_data] = Batch_rinex2snrfile_1(obsstr, sp3str, station_info_all);
+        elseif rinex_option == 2 % for RINEX3
+            [snr_azi, snr_all ,snr_data] = Batch_rinex2snrfile_2(obsstr, sp3str, station_info_all, settings);
+        end
+    else
+        for z = 1:2
+            if z == 2
+                station_info_all.azi_lim = station_info_all.azi_lim2;
+                station_info_all.azi_mask = station_info_all.azi_mask2;
+                station_info_all.elv_lim = station_info_all.elv_lim2;
+            end
+            if rinex_option == 1    % for RINEX2
+                [snr_azi, snr_all, snr_data] = Batch_rinex2snrfile_1(obsstr, sp3str, station_info_all);
+            elseif rinex_option == 2 % for RINEX3
+                [snr_azi, snr_all ,snr_data] = Batch_rinex2snrfile_2(obsstr, sp3str, station_info_all, settings);
+            end
+            if z == 1
+                snr_data1 = snr_data;
+            else
+                fields = fieldnames(snr_data);
+                S_combined = struct();
+
+                for i = 1:numel(fields)
+                    field = fields{i};
+                    S_combined.(field) = [snr_data1.(field); snr_data.(field)];
+                end
+
+                snr_data = S_combined;
+            end
+        end
     end
-    
+
     if ~exist([settings.Out_path,'\SNR_file'],'dir')
         mkdir([settings.Out_path,'\SNR_file'])
     end
     parsave([settings.Out_path , '\SNR_file\', settings.station_name, num2str(tdatenum), '.mat'],           snr_data,'snr_data');
-%     parsave([settings.Out_path , '\SNR_file\', settings.station_name, num2str(tdatenum), 'unselected.mat'], snr_all,'snr_all');
-%     parsave([settings.Out_path , '\SNR_file\', settings.station_name, num2str(tdatenum), 'azi.mat'],        snr_azi,'snr_azi');
 end
 
 if settings.methods(3) ~= 0 % For carrier
-    if rinex_option == 1    % for RINEX2
-        [carrier_azi, carrier_all, carrier_data] = Batch_rinex2carrierfile_1(obsstr, sp3str, station_info_all);
-    elseif rinex_option == 2 % for RINEX3
-        [carrier_azi, carrier_all, carrier_data] = Batch_rinex2carrierfile_2(obsstr, sp3str, station_info_all, settings);
-    end
-    
-    if ~exist([settings.Out_path,'\Carrier_file'],'dir')
-        mkdir([settings.Out_path,'\Carrier_file'])
-    end
-    parsave([settings.Out_path , '\Carrier_file\', settings.station_name, num2str(tdatenum), '.mat'],           carrier_data,'carrier_data');
-%     parsave([settings.Out_path , '\Carrier_file\', settings.station_name, num2str(tdatenum), 'unselected.mat'], carrier_all,'carrier_all');
-%     parsave([settings.Out_path , '\Carrier_file\', settings.station_name, num2str(tdatenum), 'azi.mat'],        carrier_azi,'carrier_azi');
-    is_carrier = 1;
-end
-
-if settings.methods(4) ~= 0 % For pseudorange
-    if rinex_option == 1    % for RINEX2
-        [pseudorange_azi, pseudorange_all, pseudorange_data] = Batch_rinex2pseudorangefile_1(obsstr, sp3str, station_info_all);
-    elseif rinex_option == 2 % for RINEX3
-        [pseudorange_azi, pseudorange_all, pseudorange_data] = Batch_rinex2pseudorangefile_2(obsstr, sp3str, station_info_all, settings);
-    end
-    
-    if ~exist([settings.Out_path,'\Pseudorange_file'],'dir')
-        mkdir([settings.Out_path,'\Pseudorange_file'])
-    end
-    parsave([settings.Out_path , '\Pseudorange_file\', settings.station_name, num2str(tdatenum), '.mat'],           pseudorange_data,'pseudorange_data');
-%     parsave([settings.Out_path , '\Pseudorange_file\', settings.station_name, num2str(tdatenum), 'unselected.mat'], pseudorange_all,'pseudorange_all');
-%     parsave([settings.Out_path , '\Pseudorange_file\', settings.station_name, num2str(tdatenum), 'azi.mat'],        pseudorange_azi,'pseudorange_azi');
-    is_pseudorange = 1;
-end
-
-if settings.methods(5) ~= 0 % For carrier & pseudorange
-    if ~is_pseudorange
-        if rinex_option == 1    % for RINEX2
-            [pseudorange_azi, pseudorange_all, pseudorange_data] = Batch_rinex2pseudorangefile_1(obsstr, sp3str, station_info_all);
-        elseif rinex_option == 2 % for RINEX3
-            [pseudorange_azi, pseudorange_all, pseudorange_data] = Batch_rinex2pseudorangefile_2(obsstr, sp3str, station_info_all, settings);
-        end
-        
-        if ~exist([settings.Out_path,'\Pseudorange_file'],'dir')
-            mkdir([settings.Out_path,'\Pseudorange_file'])
-        end
-        parsave([settings.Out_path , '\Pseudorange_file\', settings.station_name, num2str(tdatenum), '.mat'],           pseudorange_data,'pseudorange_data');
-%         parsave([settings.Out_path , '\Pseudorange_file\', settings.station_name, num2str(tdatenum), 'unselected.mat'], pseudorange_all,'pseudorange_all');
-%         parsave([settings.Out_path , '\Pseudorange_file\', settings.station_name, num2str(tdatenum), 'azi.mat'],        pseudorange_azi,'pseudorange_azi');
-    end
-    
-    if ~is_carrier
+    if numel(fieldnames(station_info_all)) ~= 10
         if rinex_option == 1    % for RINEX2
             [carrier_azi, carrier_all, carrier_data] = Batch_rinex2carrierfile_1(obsstr, sp3str, station_info_all);
         elseif rinex_option == 2 % for RINEX3
             [carrier_azi, carrier_all, carrier_data] = Batch_rinex2carrierfile_2(obsstr, sp3str, station_info_all, settings);
         end
-        
+    else
+        for z = 1:2
+            if z == 2
+                station_info_all.azi_lim = station_info_all.azi_lim2;
+                station_info_all.azi_mask = station_info_all.azi_mask2;
+                station_info_all.elv_lim = station_info_all.elv_lim2;
+            end
+            if rinex_option == 1    % for RINEX2
+                [carrier_azi, carrier_all, carrier_data] = Batch_rinex2carrierfile_1(obsstr, sp3str, station_info_all);
+            elseif rinex_option == 2 % for RINEX3
+                [carrier_azi, carrier_all, carrier_data] = Batch_rinex2carrierfile_2(obsstr, sp3str, station_info_all, settings);
+            end
+            if z == 1
+                carrier_data1 = carrier_data;
+            else
+                fields = fieldnames(carrier_data);
+                S_combined = struct();
+
+                for i = 1:numel(fields)
+                    field = fields{i};
+                    S_combined.(field) = [carrier_data1.(field); carrier_data.(field)];
+                end
+
+                carrier_data = S_combined;
+            end
+        end
+    end
+
+    if ~exist([settings.Out_path,'\Carrier_file'],'dir')
+        mkdir([settings.Out_path,'\Carrier_file'])
+    end
+    parsave([settings.Out_path , '\Carrier_file\', settings.station_name, num2str(tdatenum), '.mat'],           carrier_data,'carrier_data');
+    %     parsave([settings.Out_path , '\Carrier_file\', settings.station_name, num2str(tdatenum), 'unselected.mat'], carrier_all,'carrier_all');
+    %     parsave([settings.Out_path , '\Carrier_file\', settings.station_name, num2str(tdatenum), 'azi.mat'],        carrier_azi,'carrier_azi');
+    is_carrier = 1;
+end
+
+if settings.methods(4) ~= 0 % For pseudorange
+    if numel(fieldnames(station_info_all)) ~= 10
+        if rinex_option == 1    % for RINEX2
+            [pseudorange_azi, pseudorange_all, pseudorange_data] = Batch_rinex2pseudorangefile_1(obsstr, sp3str, station_info_all);
+        elseif rinex_option == 2 % for RINEX3
+            [pseudorange_azi, pseudorange_all, pseudorange_data] = Batch_rinex2pseudorangefile_2(obsstr, sp3str, station_info_all, settings);
+        end
+    else
+        for z = 1:2
+            if z == 2
+                station_info_all.azi_lim = station_info_all.azi_lim2;
+                station_info_all.azi_mask = station_info_all.azi_mask2;
+                station_info_all.elv_lim = station_info_all.elv_lim2;
+            end
+            if rinex_option == 1    % for RINEX2
+                [pseudorange_azi, pseudorange_all, pseudorange_data] = Batch_rinex2pseudorangefile_1(obsstr, sp3str, station_info_all);
+            elseif rinex_option == 2 % for RINEX3
+                [pseudorange_azi, pseudorange_all, pseudorange_data] = Batch_rinex2pseudorangefile_2(obsstr, sp3str, station_info_all, settings);
+            end
+            if z == 1
+                pseudorange_data1 = pseudorange_data;
+            else
+                fields = fieldnames(pseudorange_data);
+                S_combined = struct();
+
+                for i = 1:numel(fields)
+                    field = fields{i};
+                    S_combined.(field) = [pseudorange_data1.(field); pseudorange_data.(field)];
+                end
+
+                pseudorange_data = S_combined;
+            end
+        end
+    end
+
+    if ~exist([settings.Out_path,'\Pseudorange_file'],'dir')
+        mkdir([settings.Out_path,'\Pseudorange_file'])
+    end
+    parsave([settings.Out_path , '\Pseudorange_file\', settings.station_name, num2str(tdatenum), '.mat'],           pseudorange_data,'pseudorange_data');
+    %     parsave([settings.Out_path , '\Pseudorange_file\', settings.station_name, num2str(tdatenum), 'unselected.mat'], pseudorange_all,'pseudorange_all');
+    %     parsave([settings.Out_path , '\Pseudorange_file\', settings.station_name, num2str(tdatenum), 'azi.mat'],        pseudorange_azi,'pseudorange_azi');
+    is_pseudorange = 1;
+end
+
+if settings.methods(5) ~= 0 % For carrier & pseudorange
+    if ~is_pseudorange
+        if numel(fieldnames(station_info_all)) ~= 10
+            if rinex_option == 1    % for RINEX2
+                [pseudorange_azi, pseudorange_all, pseudorange_data] = Batch_rinex2pseudorangefile_1(obsstr, sp3str, station_info_all);
+            elseif rinex_option == 2 % for RINEX3
+                [pseudorange_azi, pseudorange_all, pseudorange_data] = Batch_rinex2pseudorangefile_2(obsstr, sp3str, station_info_all, settings);
+            end
+        else
+            for z = 1:2
+                if z == 2
+                    station_info_all.azi_lim = station_info_all.azi_lim2;
+                    station_info_all.azi_mask = station_info_all.azi_mask2;
+                    station_info_all.elv_lim = station_info_all.elv_lim2;
+                end
+                if rinex_option == 1    % for RINEX2
+                    [pseudorange_azi, pseudorange_all, pseudorange_data] = Batch_rinex2pseudorangefile_1(obsstr, sp3str, station_info_all);
+                elseif rinex_option == 2 % for RINEX3
+                    [pseudorange_azi, pseudorange_all, pseudorange_data] = Batch_rinex2pseudorangefile_2(obsstr, sp3str, station_info_all, settings);
+                end
+                if z == 1
+                    pseudorange_data1 = pseudorange_data;
+                else
+                    fields = fieldnames(pseudorange_data);
+                    S_combined = struct();
+
+                    for i = 1:numel(fields)
+                        field = fields{i};
+                        S_combined.(field) = [pseudorange_data1.(field); pseudorange_data.(field)];
+                    end
+
+                    pseudorange_data = S_combined;
+                end
+            end
+        end
+
+        if ~exist([settings.Out_path,'\Pseudorange_file'],'dir')
+            mkdir([settings.Out_path,'\Pseudorange_file'])
+        end
+        parsave([settings.Out_path , '\Pseudorange_file\', settings.station_name, num2str(tdatenum), '.mat'],           pseudorange_data,'pseudorange_data');
+        %     parsave([settings.Out_path , '\Pseudorange_file\', settings.station_name, num2str(tdatenum), 'unselected.mat'], pseudorange_all,'pseudorange_all');
+        %     parsave([settings.Out_path , '\Pseudorange_file\', settings.station_name, num2str(tdatenum), 'azi.mat'],        pseudorange_azi,'pseudorange_azi');
+
+    end
+
+    if ~is_carrier
+        if numel(fieldnames(station_info_all)) ~= 10
+            if rinex_option == 1    % for RINEX2
+                [carrier_azi, carrier_all, carrier_data] = Batch_rinex2carrierfile_1(obsstr, sp3str, station_info_all);
+            elseif rinex_option == 2 % for RINEX3
+                [carrier_azi, carrier_all, carrier_data] = Batch_rinex2carrierfile_2(obsstr, sp3str, station_info_all, settings);
+            end
+        else
+            for z = 1:2
+                if z == 2
+                    station_info_all.azi_lim = station_info_all.azi_lim2;
+                    station_info_all.azi_mask = station_info_all.azi_mask2;
+                    station_info_all.elv_lim = station_info_all.elv_lim2;
+                end
+                if rinex_option == 1    % for RINEX2
+                    [carrier_azi, carrier_all, carrier_data] = Batch_rinex2carrierfile_1(obsstr, sp3str, station_info_all);
+                elseif rinex_option == 2 % for RINEX3
+                    [carrier_azi, carrier_all, carrier_data] = Batch_rinex2carrierfile_2(obsstr, sp3str, station_info_all, settings);
+                end
+                if z == 1
+                    carrier_data1 = carrier_data;
+                else
+                    fields = fieldnames(carrier_data);
+                    S_combined = struct();
+
+                    for i = 1:numel(fields)
+                        field = fields{i};
+                        S_combined.(field) = [carrier_data1.(field); carrier_data.(field)];
+                    end
+
+                    carrier_data = S_combined;
+                end
+            end
+        end
+
         if ~exist([settings.Out_path,'\Carrier_file'],'dir')
             mkdir([settings.Out_path,'\Carrier_file'])
         end
         parsave([settings.Out_path , '\Carrier_file\', settings.station_name, num2str(tdatenum), '.mat'],           carrier_data,'carrier_data');
-%         parsave([settings.Out_path , '\Carrier_file\', settings.station_name, num2str(tdatenum), 'unselected.mat'], carrier_all,'carrier_all');
-%         parsave([settings.Out_path , '\Carrier_file\', settings.station_name, num2str(tdatenum), 'azi.mat'],        carrier_azi,'carrier_azi');
+        %     parsave([settings.Out_path , '\Carrier_file\', settings.station_name, num2str(tdatenum), 'unselected.mat'], carrier_all,'carrier_all');
+        %     parsave([settings.Out_path , '\Carrier_file\', settings.station_name, num2str(tdatenum), 'azi.mat'],        carrier_azi,'carrier_azi');
     end
 end
 end

@@ -1,5 +1,5 @@
 function InverseModelingCallback(app)
-try
+% try
     app.RunningstateLamp.Color = 'g';
     drawnow
 
@@ -35,13 +35,13 @@ try
     app.RunningstateLamp.Color = 'r';
     fig = app.UIFigure;
     uialert(fig,'Modeling Complete!','success','Icon','success')
-catch ME
-    drawnow
-    app.RunningstateLamp.Color = 'r';
-    fig = app.UIFigure;
-    uialert(fig,[ME.message,newline,'File:',ME.stack(1,:).file,newline,'Name:',...
-        ME.stack(1,:).name,newline,'Line:',num2str(ME.stack(1,:).line)],'warning')
-    return
-
-end
-end
+% catch ME
+%     drawnow
+%     app.RunningstateLamp.Color = 'r';
+%     fig = app.UIFigure;
+%     uialert(fig,[ME.message,newline,'File:',ME.stack(1,:).file,newline,'Name:',...
+%         ME.stack(1,:).name,newline,'Line:',num2str(ME.stack(1,:).line)],'warning')
+%     return
+% 
+% end
+% end

@@ -1,5 +1,5 @@
 function [perm, freq] = get_permittivity (material, freq, extra, sanitize, convention)
-%GET_PERMITTIVITY:  Return electric permittivity of a given material.
+%GET_PERMITTIVITY:  Return electric permittivity of a given material. ()
 % 
 % SYNTAX:
 %    get_permittivity ()
@@ -9,7 +9,7 @@ function [perm, freq] = get_permittivity (material, freq, extra, sanitize, conve
 %    perm = get_permittivity (material, freq, extra)
 %
 % INPUT:
-%    material: [char] material name ('asphalt', 'copper', etc.)
+%    material: [char] material name ('asphalt', 'copper', etc.)
 %    material: [structure] material definition with at least the field 'name';
 %      optionally it contains also the extra fields described below.
 %    material: [cell] an array of materials, each defined as above

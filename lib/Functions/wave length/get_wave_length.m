@@ -1,4 +1,4 @@
-function Lcar = get_wave_length(gnss_system, band, sat)
+function Lcar = get_wave_length(gnss_system, band, varargin)
 %% Get wave length
 % INPUT
 % gnss_system - string of system name: GPS, GLONASS, GALILEO, BDS
@@ -6,11 +6,13 @@ function Lcar = get_wave_length(gnss_system, band, sat)
 % sat - double of PRN
 % OUTPUT
 % Lcar - double of wave length
-% 
+%
 % Ruixian Hao, 12/2024
 
-load("glonasswlen.mat")
-
+if nargin > 2
+    load("glonasswlen.mat")
+    sat = varargin{1};
+end
 if gnss_system == "GPS"
     if numel(band) == 3
         if band(2) == '1' %& band(3) ~= 'W'
@@ -35,7 +37,7 @@ elseif gnss_system == "GLONASS"
         return
     end
     if band(2) == '1'
-        Lcar = glonasswlen(sat); % for GLONASS L1 
+        Lcar = glonasswlen(sat); % for GLONASS L1
     elseif band(2) == '2'
         Lcar = glonasswlen(sat);
         Lcar = 9/7 * Lcar;% L2
@@ -50,7 +52,7 @@ elseif gnss_system == "GLONASS"
     end
 elseif gnss_system == "GALILEO"
     if band(2) == '1'
-        Lcar = (299792458/1575.42e06); % E1 for galileo  
+        Lcar = (299792458/1575.42e06); % E1 for galileo
     elseif band(2) == '5'
         Lcar = (299792458/1176.45e06);% E5a
     elseif band(2) == '7'
@@ -62,7 +64,7 @@ elseif gnss_system == "GALILEO"
     end
 elseif gnss_system == "BDS"
     if band(2) == '2'
-        Lcar = (299792458/1561.098e06); % B1I for BDS     
+        Lcar = (299792458/1561.098e06); % B1I for BDS
     elseif band(2) == '7'
         Lcar = (299792458/1207.14e06);% B2I
     elseif band(2) == '6'

@@ -133,6 +133,20 @@ t_rh(dell)=[];
 rh_invjs  = bspline_deboor(p+1,knots, sfacsjsp, t_rh);
 rh_invpre = bspline_deboor(p+1,knots, sfacsprep, t_rh);
 
+% visual
+% figure
+% knots_value = interp1(t_rh, rh_invjs, knots);
+% plot(datetime(t_rh,'ConvertFrom', 'datenum'), rh_invjs, 'LineWidth', 3, 'DisplayName','RH (B-Spline)')
+% hold on
+% scatter(datetime(knots,'ConvertFrom','datenum'), knots_value,'filled', 'r','DisplayName', 'knots')
+% plot(datetime(linspace(min(knots), max(knots), numel(sfacsjsp)), 'ConvertFrom', 'datenum'), ...
+%     sfacsjsp, '-o', 'LineWidth',2,'DisplayName','Control points')
+% xlim([min(datetime(t_rh,'ConvertFrom', 'datenum')) max(datetime(t_rh,'ConvertFrom', 'datenum'))])
+% ylabel('RH /m')
+% xlabel('Time')
+% legend('FontSize',28,'FontWeight','bold','EdgeColor','None','Location','best','Color', 'None')
+% set(gca, 'FontSize', 28, 'FontWeight','bold', 'LineWidth', 3)
+% box off
 
 %% Tide file exist
 if exist("tgstring","var")

@@ -1,12 +1,12 @@
-function RH_final = lsq(epoc_num, start_date, interval, RH_info_all, ...
+function [RH_final, h_change] = lsq(epoc_num, start_date, interval, RH_info_all, ...
     h_initial, h_trop, roc, t, e, h_tidal)
 
 h_change = nan(1,epoc_num);
 RH_final = nan(1,epoc_num);
 for i = 1:epoc_num
     cur_date = start_date + (i-1)*interval/(24*60);
-    cur_indx = (cur_date-30/(24*60)) <= datenum(RH_info_all.Time) & ...
-        datenum(RH_info_all.Time) <= (cur_date+30/(24*60));   % win size = 1hour
+    cur_indx = (cur_date-120/(24*60)) <= datenum(RH_info_all.Time) & ...
+        datenum(RH_info_all.Time) <= (cur_date+120/(24*60));   % win size = 1hour
     cur_h_initial = h_initial(cur_indx);
     cur_h_trop = h_trop(cur_indx);
     cur_roc = roc(cur_indx);
@@ -39,6 +39,6 @@ for i = 1:epoc_num
 
     end
     h_change(i) = X_p_now(1);
-    RH_final(i) = X_p_now(2) + mean(cur_h_trop,'omitnan');
+    RH_final(i) = X_p_now(2);% + mean(cur_h_trop,'omitnan');
 end
 end

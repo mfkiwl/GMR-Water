@@ -22,6 +22,9 @@ secs = 0:dts:(86400-dts);
 [satind,~,~] = size(xyz);
 for i = 1:satind
     if isnan(squeeze(xyz(i,:,1)))
+        xyzt(:,1,i) = nan;
+        xyzt(:,2,i) = nan;
+        xyzt(:,3,i) = nan;
         continue
     end
     xyzt(:,1,i) = spline(txyzsecs,squeeze(xyz(i,:,1)),secs);

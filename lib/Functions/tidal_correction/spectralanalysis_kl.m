@@ -1,23 +1,6 @@
 function [t_rh,rh_adj,rh_nadj,rms_adj,rms_nadj] = spectralanalysis_kl(app,slvlrdir, ...
     tgstring,redconstits,makefig,Final_file_path)
-% INPUTS
-% slvlrdir: path to directory containing observed or synthetic slvlr
-% arrays (i.e., using analyzesnr_fun.m or makesnr_fun.m)
-% tgstring: path to tide gauge data in format 'xaxis' 'slvl'
-% if no tg, leave empty: ''
-% redoncstits: if set to 1 then use full 145 tidal constituents for
-% adjustment, otherwise just use 5, can choose which 5 below
-% only set to 1 if time series is long (1 year +)
 
-% OUTPUTS
-% t_rh: time index of output reflector heights
-% rh_adj: adjusted reflector heights
-% rh_nadj: unadjusted reflector heights
-% rms_adj: RMS of tide gauge and adjusted reflector heights (if tide gauge given)
-% rms_nadj: RMS of tide gauge and unadjusted reflector heights (if tide gauge given)
-
-
-% constellations
 gps = 1;
 glo = 1;
 gal = 1;
@@ -26,8 +9,6 @@ bds = 1;
 global Operation_settings
 plat     = Operation_settings.station_l(2);
 plon     = Operation_settings.station_l(1);
-elv_low  = Operation_settings.elv(1);
-elv_high = Operation_settings.elv(2);
 startdate= datenum(Operation_settings.time(1));
 enddate  = datenum(Operation_settings.time(2));
 
@@ -97,8 +78,11 @@ slvlr(delete,:)      = [];
 
 points_per_day      = numel(t)/(enddate+1-startdate);
 app.point_day.Value = points_per_day;
-load('tidefreqs.mat')
 
+%% 
+rh_m = mean(rh_nadj,'omitmissing');
+rh_nadj = rh_nadj-rh_m;
+load('tidefreqs.mat')
 if redconstits == 0
     ju = 1:145;
 else
@@ -112,9 +96,10 @@ tempfun = @(coefs) tidemod_kl(coefs, t, rh_nadj, ju, tanthter, freqs, plat);
 options = optimoptions(@lsqnonlin,'Algorithm','trust-region-reflective','Display','off');
 coefs_ls= lsqnonlin(tempfun,coefs_0,[],[],options); % here is the least squares
 
-rh_adj = tidemod_kl_plot(coefs_ls,t,rh_nadj,ju,tanthter,freqs,plat);
-rh_adj = app.asl.Value - rh_adj;
-rh_nadj = app.asl.Value - rh_nadj;
+[tidesout,~] = tidemod_kl_plot(coefs_ls,t,ju,tanthter,freqs,plat);
+rh_adj = rh_nadj + tidesout;
+rh_nadj = app.asl.Value - (rh_nadj+rh_m);
+rh_adj = app.asl.Value - (rh_adj+rh_m);
 
 [A,G,names] = coef2ampphase(coefs_ls,names);
 t_rh = t;
@@ -139,7 +124,7 @@ else
     rms_nadj = NaN;
 end
 
-%% Print Final File
+%% output Final File
 Time = datetime(t,'ConvertFrom','datenum');
 sys = char(slvlr(:,14));
 System = strings(size(sys));
@@ -176,9 +161,8 @@ Final_file_name = [Operation_settings.station_name,'_', char(datetime(startdate,
     char(datetime(enddate,'ConvertFrom','datenum')),'_SNR-Spectral.mat'];
 save(fullfile(Final_file_path,Final_file_name),"Final_info")
 
-%%
+%% For Display
 if makefig == 1
-    
     scatter(app.ans_dongtai,t_rh,rh_nadj,'r+','linewidth',1)
     hold(app.ans_dongtai,"on")
     axis(app.ans_dongtai,[startdate enddate+1 -inf inf])
@@ -192,13 +176,12 @@ if makefig == 1
     hold(app.ans_dongtai,"off")
 end
 
-if app.BA.Value == 1
+if app.BA.Value == 1 % Time serise before and after
     set(figure, 'Visible', 'on')
     figure
-
     hold on
-    scatter(t_rh,rh_nadj,'r+','linewidth',1,'displayname',['After RMS=',num2str(rms_adj*100),' cm'])
-    scatter(t_rh,rh_adj, 'b+','linewidth',1,'displayname',['Before RMS=',num2str(rms_nadj*100),' cm'])
+    scatter(t_rh, rh_nadj,'r+','linewidth',1,'displayname',['After RMS=',num2str(rms_adj*100),' cm'])
+    scatter(t_rh, rh_adj, 'b+','linewidth',1,'displayname',['Before RMS=',num2str(rms_nadj*100),' cm'])
     axis([startdate enddate+1 -inf inf])
     fs = 15;
     datetick('x',1,'keeplimits','keepticks')
@@ -210,13 +193,12 @@ if app.BA.Value == 1
     box on
     title('Correrction contrast diagram')
     legend
-
 end
 
 tide_indx = tidexp<=enddate+1 & tidexp>=startdate;
 sea_level_tide = tideyp(tide_indx);
 time_tide = tidexp(tide_indx);
-if app.band_com.Value == 1
+if app.band_com.Value == 1  % display results for different band
     figure
     gnss = ['G','R','E','C'];
     tiledlayout(4,5,'TileSpacing','compact');
@@ -259,15 +241,16 @@ if app.band_com.Value == 1
             time_band(repeat_time) = [];
             sea_level_ir_band(repeat_time) = [];
             try
-                interp_ir = interp1(time_band,sea_level_ir_band,time_tide,"linear");
+                interp_tide = interp1(time_tide,sea_level_tide,time_band,"linear");
+
             catch
                 RMS(b) = nan;
                 valid_num(b) = nan;
                 continue
             end
 
-            valid_indx = ~isnan(interp_ir) & ~isnan(sea_level_tide);
-            RMS(b) = rms(interp_ir(valid_indx)-sea_level_tide(valid_indx));
+            valid_indx = ~isnan(interp_tide) & ~isnan(sea_level_ir_band);
+            RMS(b) = rms(interp_tide(valid_indx)-sea_level_ir_band(valid_indx));
             valid_num(b) = numel(sea_level_ir_band);
         end
         b = barh(RMS*100,0.5, 'FaceColor',[0.3010 0.7450 0.9330]);
@@ -377,44 +360,12 @@ if app.cor.Value == 1
     figure
     % tide data
     tide_indx = tidexp<=enddate & tidexp>=startdate;
-    sea_level_tide = tideyp(tide_indx);
-    time_tide = tidexp(tide_indx);
+    tide_h = tideyp(tide_indx);
+    tide_t = tidexp(tide_indx);
+    ir_t = t_rh;
+    ir_h = rh_adj;
+    cor_scatter(ir_h,ir_t, tide_h, tide_t)
 
-    data = [t_rh, rh_adj];
-    data = sortrows(data);
-    time = data(:,1);
-    sea_level_ir = data(:,2);
-    repeat_time = find(diff(time)==0);
-    time(repeat_time) = [];
-    sea_level_ir(repeat_time) = [];
-    interp_ir = interp1(time,sea_level_ir,time_tide,"linear");
-    [~,TFrm] = rmoutliers(interp_ir,"movmedian",20);
-    interp_ir(TFrm) = nan; 
-    CData = density2C(interp_ir,sea_level_tide,min(sea_level_tide):0.01:max(sea_level_tide),min(sea_level_tide):0.1:max(sea_level_tide));
-    set(gcf,'Color',[1 1 1]);
-    scatter(interp_ir,sea_level_tide,50,'filled','CData',CData);
-    xlim([min(sea_level_tide),max(sea_level_tide)])
-    ylim([min(sea_level_tide),max(sea_level_tide)])
-    box on
-    hold on
-    x = min(sea_level_tide):0.01:max(sea_level_tide);
-    y = x;
-    plot(x, y, 'r--','LineWidth',3);
-
-    nan_indx = isnan(interp_ir) | isnan(sea_level_tide);
-    p = polyfit(interp_ir(~nan_indx),sea_level_tide(~nan_indx), 1);
-    y_fit = p(1)*x + p(2);
-    plot(x, y_fit, 'r');
-
-    r = corrcoef(interp_ir(~nan_indx),sea_level_tide(~nan_indx));
-    r_value = r(1,2);
-    text(min(sea_level_tide)+0.1,max(sea_level_tide)-0.1, ['r = ', num2str(r_value)]);
-    colorbar
-
-    xlabel('GNSS-IR Water Level(m)')
-    ylabel('Tide Gauge (m)')
-    title('Correlation scatter plot')
-    hold off
 end
 end
 

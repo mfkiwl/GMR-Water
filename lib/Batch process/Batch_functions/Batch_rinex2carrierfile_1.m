@@ -50,16 +50,16 @@ carrier_data = carrier_azi;
 if isfield(carrier_data,'GPS')
     GPS_data = carrier_data.GPS;
     GPS_filtered = GPS_data(GPS_data.GPS_elv >= elvmuth_min & GPS_data.GPS_elv <= elvmuth_max, :);
-    carrier_data.GPS = GPS_filtered(:,1:end-1);
+    carrier_data.GPS = GPS_filtered(:,1:end);
 end
 if isfield(carrier_data,'GLONASS')
     GLONASS_data = carrier_data.GLONASS;
     GLONASS_filtered = GLONASS_data(GLONASS_data.GLONASS_elv >= elvmuth_min & GLONASS_data.GLONASS_elv <= elvmuth_max, :);
-    carrier_data.GLONASS = GLONASS_filtered(:,1:end-1);
+    carrier_data.GLONASS = GLONASS_filtered(:,1:end);
 end
 if isfield(carrier_data,'GALILEO')
     GALILEO_data = carrier_data.GALILEO;
     Galileo_filtered = GALILEO_data(GALILEO_data.GALILEO_elv >= elvmuth_min & GALILEO_data.GALILEO_elv <= elvmuth_max, :);
-    carrier_data.GALILEO = Galileo_filtered(:,1:end-1);
+    carrier_data.GALILEO = Galileo_filtered(:,1:end);
 end
 

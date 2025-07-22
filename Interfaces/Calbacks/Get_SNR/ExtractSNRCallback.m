@@ -18,8 +18,7 @@ drawnow
 set(0, 'DefaultFigureVisible', 'off');
 [snr_data] = load_SNRdata(app, d);
 
-% display result
-
+%% display result
 load([app.path_SNR.Value, '\', Operation_settings.station_name, num2str(enddate), '.mat'])
 load([app.path_SNR.Value, '\', Operation_settings.station_name, num2str(enddate), 'unselected.mat']);
 

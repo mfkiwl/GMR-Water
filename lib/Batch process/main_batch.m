@@ -22,7 +22,7 @@ end
 if settings.flow(2)
     tic
     disp('------------------------------------STAR INVERSE------------------------------------')
-    genMethodsSettings
+    genMethodsSettings(string(settings.station_name))
     Inverse_RH
     delete('MethodsSettings.mat')
     disp('----------------------------------INVERSE COMPLETED---------------------------------')
@@ -31,18 +31,26 @@ end
 
 % Tidal correction & save
 if settings.flow(3)
+    if settings.methods(2) && sum(settings.methods)==1
+        if nargout > 0
+            settings.Final_path = [settings.Out_path,'/Final_file'];
+            settings.filenumber = 1;
+            settings.station_name = station_name;
+            settings.antenna_height = sta_asl;
+
+            varargout = {settings};
+        end
+        return
+    end
     tic
     disp('------------------------------TIDAL CORRECTION & SAVE-------------------------------')
     clear RH_info
-    start_date = datenum(start_time);
-    end_date   = datenum(end_time);
     RH_path = [settings.Out_path, '/RH_file/'];
     RH_info_all = cell(1, end_date+1-start_date);
     i = 0;
     for tdatenum = start_date:end_date
-        curdt = datetime(tdatenum,'ConvertFrom','datenum');
-        RH_file = [RH_path,settings.station_name,num2str(tdatenum),'RH_info.mat'];
-        RH_file = load(RH_file);   RH_info = RH_file.RH_info;
+        RH_file_name = [RH_path,settings.station_name,num2str(tdatenum),'RH_info.mat'];
+        RH_file = load(RH_file_name);   RH_info = RH_file.RH_info;
         i = i+1;
         RH_info_all{i} = RH_info;
     end
@@ -51,8 +59,26 @@ if settings.flow(3)
     RH_info_all(isnan(RH_info_all.RH),:) = [];
 
 
-    
-    [~, RH_info_all, ~] = Tidal_correction(RH_info_all, sta_lat, sta_asl, tide_range);
+    % RH_qc = qc_moving_avg_RH(RH_info_all.Time, RH_info_all.RH, 60);
+    % RH_info_all.Time = RH_qc.time;
+    % RH_info_all.RH = RH_qc.RH_QC;
+    % RH_info_all(isnan(RH_info_all.RH),:) = [];
+    % o = RH_info_all.RH>8.3 | RH_info_all.RH<3.8;
+    % RH_info_all(o, :) = [];
+    [~, RH_info_all, ~,tide_fit] = Tidal_correction(RH_info_all, sta_lat, sta_asl, tide_range);
+    while 1
+        [~, RH_info_all, ~,tide_fit] = Tidal_correction(RH_info_all, sta_lat, sta_asl, tide_range);
+        RH_info_all.ROC = -RH_info_all.ROC;
+        v = abs(RH_info_all.RH-tide_fit);
+        m = sqrt((v' * v)/(numel(v)-9));
+        out = v>6*m | v>1;
+        RH_info_all(out, :) = [];
+
+        if sum(out) == 0
+            break
+        end
+    end
+    % RH_info_all.tidal_cor = ones(numel(RH_info_all.Time),1);
     
     band = RH_info_all.BAND;
     fp_all = unique(RH_info_all.System+band);
@@ -130,4 +156,53 @@ if settings.flow(3)
 end
 disp('---------------------------------------SAVED!!!-------------------------------------')
 toc
+end
+
+
+function RH_qc_ts = qc_moving_avg_RH(time, RH, window_minutes)
+    
+    if isrow(time)
+        time = time';
+    end
+    if isrow(RH)
+        RH = RH';
+    end
+
+    n = length(RH);
+    RH_qc = RH;
+
+    half_window = minutes(window_minutes / 2); 
+
+    for i = 1:n
+        t_center = time(i);
+        idx_in_window = (time >= (t_center - half_window)) & (time <= (t_center + half_window));
+        window_data = RH(idx_in_window);
+        window_data = window_data(~isnan(window_data));  
+        window_data(window_data==RH(i)) = [];
+
+        if length(window_data) >= 3
+            mu = mean(window_data);
+            sigma = std(window_data);
+            lower = mu - 1.96 * sigma;
+            upper = mu + 1.96 * sigma;
+
+            if RH(i) < lower || RH(i) > upper
+                RH_qc(i) = NaN;
+            end
+        end
+    end
+
+    RH_qc_ts = timetable(time, RH_qc, 'VariableNames', {'RH_QC'});
+
+    if 0
+        figure;
+        plot(time, RH, '.-b', 'DisplayName', 'RH'); hold on;
+        plot(time, RH_qc, '.-g', 'LineWidth', 1.5, 'DisplayName', 'QC RH');
+        outlier_idx = isnan(RH_qc);
+        if any(outlier_idx)
+            plot(time(outlier_idx), RH(outlier_idx), 'ro', 'MarkerSize', 6, 'DisplayName', '异常值');
+        end
+        legend;
+        grid on;
+    end
 end

@@ -10,9 +10,9 @@ staxyz   = station_info_all.staxyz;
 
 GNSS_num = 0;
 data = rinexread(obsstr);
-[txyz,xyz] = readsp3file(sp3str);
-txyzsecs=txyz-txyz(1);
-txyzsecs=txyzsecs.*86400;
+[txyz, xyz, ~] = readsp3file(sp3str);
+txyzsecs = txyz-txyz(1);
+txyzsecs = txyzsecs.*86400;
 dts = settings.Rinex_dt;
 secs = 0:dts:(86400-dts);
 [satind,~,~] = size(xyz);
@@ -46,6 +46,7 @@ trans_matrix(3,3)= sind(ll(1));
 [time_points, coordinates, satellites] = size(obsvec);
 for t = 1:time_points
     for s = 1:satellites
+
         xyz = squeeze(obsvec(t, :, s));
 
         rss = trans_matrix * xyz';
@@ -54,8 +55,8 @@ for t = 1:time_points
             azimuth = 360+azimuth;
         end
         azi_all(t,s) = azimuth;
-        elev = asind(rss(3, :)/sqrt(sum((rss).^2)));
-        elv_all(t,s) = elev;
+        elevation = asind(rss(3, :)/sqrt(sum((rss).^2)));
+        elv_all(t,s) = elevation;
     end
 end
 
@@ -185,7 +186,6 @@ if isfield(data,'GLONASS')
         satnum = GLONASS_data_prn_num(time_indx);
         for satindx = 1:numel(satnum)
             satindx_num = satnum(satindx);
-
             if error_ind(ind) ~= 0
                 ind = ind+1;
             end
@@ -203,9 +203,9 @@ if isfield(data,'GLONASS')
             end
             if (secs(j) == GLONASS_data_time(ind) && ...
                     satindx_num == GLONASS_data_prn_num(ind)) && i == 1
-                [azi,elv] = gnss2azelv(staxyz,xyzt(j,:,satindx_num+32),plat,plon);
-                GLONASS_azi(ind,1) = azi;
-                GLONASS_elv(ind,1) = elv;
+                % [azi,elv] = gnss2azelv(staxyz,xyzt(j,:,satindx_num+32),plat,plon);
+                GLONASS_azi(ind,1) = azi_all(j,satindx_num+32);
+                GLONASS_elv(ind,1) = elv_all(j,satindx_num+32);
                 ind = ind + 1;
                 if ind > numel(GLONASS_data_time)
                     bool = 1;
@@ -304,9 +304,9 @@ if isfield(data,'Galileo')
             end
             if (secs(j) == GALILEO_data_time(ind) && ...
                     satindx_num == GALILEO_data_prn_num(ind)) && i == 1
-                [azi,elv] = gnss2azelv(staxyz,xyzt(j,:,satindx_num+32+24),plat,plon);
-                GALILEO_azi(ind,1) = azi;
-                GALILEO_elv(ind,1) = elv;
+                % [azi,elv] = gnss2azelv(staxyz,xyzt(j,:,satindx_num+32+24),plat,plon);
+                GALILEO_azi(ind,1) = azi_all(j,satindx_num+32+24);
+                GALILEO_elv(ind,1) = elv_all(j,satindx_num+32+24);
                 ind = ind + 1;
                 if ind > numel(GALILEO_data_time)
                     bool = 1;
@@ -386,7 +386,7 @@ if isfield(data,'BeiDou')
             end
 
             i = 1;
-            if satindx_num>46
+            if satindx_num+32+24+36 > size(xyzt,3)
                 i = 0;
                 BDS_azi(ind,1) = nan;
                 BDS_elv(ind,1) = nan;
@@ -398,9 +398,9 @@ if isfield(data,'BeiDou')
             end
             if (secs(j) == BDS_data_time(ind) && satindx_num == BDS_data_prn_num(ind)) ...
                     && i == 1
-                [azi,elv] = gnss2azelv(staxyz,xyzt(j,:,satindx_num+32+24+36),plat,plon);
-                BDS_azi(ind,1) = azi;
-                BDS_elv(ind,1) = elv;
+                % [azi,elv] = gnss2azelv(staxyz,xyzt(j,:,satindx_num+32+24+36),plat,plon);
+                BDS_azi(ind,1) = azi_all(j,satindx_num+32+24+36);
+                BDS_elv(ind,1) = elv_all(j,satindx_num+32+24+36);
                 ind = ind + 1;
                 
                 if ind > numel(BDS_data_time)

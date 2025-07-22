@@ -17,7 +17,7 @@ satmatr={'G01';'G02';'G03';'G04';'G05';'G06';'G07';'G08';'G09';...
     'E01';'E02';'E03';'E04';'E05';'E06';'E07';'E08';'E09';...
     'E10';'E11';'E12';'E13';'E14';'E15';'E16';'E17';'E18';'E19';...
     'E20';'E21';'E22';'E23';'E24';'E25';'E26';'E27';'E28';'E29';...
-    'E30';'E31';'E32';'E33';'E34';'E35';'E36'}; 
+    'E30';'E31';'E32';'E33';'E34';'E35';'E36'};
 
 fid = fopen(obsstr);
 
@@ -81,7 +81,7 @@ numsats = 0;
 
 while ~feof(fid)
     i=0;
-    % this is to deal with spliced files 
+    % this is to deal with spliced files
     if numel(tline) >= 31
         if strcmp(tline(1:31),'                            4  ')==1 || strcmp(tline(1:32),'                            4 64')
             tmpskip = str2double(tline(32)) + 1;
@@ -161,61 +161,61 @@ while ~feof(fid)
         end
         % getting s2
         if exist('s2pos', 'var')
-        while s2pos > mult5
-            i=i+1;
-            mult5=5*(i+1);
-            tline=fgets(fid);
+            while s2pos > mult5
+                i=i+1;
+                mult5=5*(i+1);
+                tline=fgets(fid);
+            end
+            if numel(tline) >= (s2pos - i*5 - 1)*16 + 14
+                s2data(cursecs+1,satind) = str2double(tline((s2pos-i*5-1)*16+1:(s2pos-i*5-1)*16+14));
+            end
         end
-        if numel(tline) >= (s2pos - i*5 - 1)*16 + 14
-            s2data(cursecs+1,satind) = str2double(tline((s2pos-i*5-1)*16+1:(s2pos-i*5-1)*16+14));
+        % getting s5
+        if exist('s5pos', 'var')
+            while s5pos > mult5
+                i=i+1;
+                mult5=5*(i+1);
+                tline=fgets(fid);
+            end
+
+            if numel(tline) >= (s5pos - i*5 - 1)*16 + 14
+                s5data(cursecs+1,satind) = str2double(tline((s5pos-i*5-1)*16+1:(s5pos-i*5-1)*16+14));
+            end
         end
-        end
-         % getting s5
-         if exist('s5pos', 'var')
-        while s5pos > mult5
-            i=i+1;
-            mult5=5*(i+1);
-            tline=fgets(fid);
-        end
-         
-        if numel(tline) >= (s5pos - i*5 - 1)*16 + 14
-            s5data(cursecs+1,satind) = str2double(tline((s5pos-i*5-1)*16+1:(s5pos-i*5-1)*16+14));
-        end
-         end
         % getting s6
         if exist('s6pos', 'var')
-        while s6pos > mult5
-            i=i+1;
-            mult5=5*(i+1);
-            tline=fgets(fid);
-        end
-        
-        if numel(tline) >= (s6pos - i*5 - 1)*16 + 14
-            s6data(cursecs+1,satind) = str2double(tline((s6pos-i*5-1)*16+1:(s6pos-i*5-1)*16+14));
-        end
+            while s6pos > mult5
+                i=i+1;
+                mult5=5*(i+1);
+                tline=fgets(fid);
+            end
+
+            if numel(tline) >= (s6pos - i*5 - 1)*16 + 14
+                s6data(cursecs+1,satind) = str2double(tline((s6pos-i*5-1)*16+1:(s6pos-i*5-1)*16+14));
+            end
         end
         % getting s7
         if exist('s7pos', 'var')
-        while s7pos > mult5
-            i=i+1;
-            mult5=5*(i+1);
-            tline=fgets(fid);
+            while s7pos > mult5
+                i=i+1;
+                mult5=5*(i+1);
+                tline=fgets(fid);
+            end
+            if numel(tline) >= (s7pos - i*5 - 1)*16 + 14
+                s7data(cursecs+1,satind) = str2double(tline((s7pos-i*5-1)*16+1:(s7pos-i*5-1)*16+14));
+            end
         end
-        if numel(tline) >= (s7pos - i*5 - 1)*16 + 14
-            s7data(cursecs+1,satind) = str2double(tline((s7pos-i*5-1)*16+1:(s7pos-i*5-1)*16+14));
+        % getting s8
+        if exist('s8pos', 'var')
+            while s8pos > mult5
+                i=i+1;
+                mult5=5*(i+1);
+                tline=fgets(fid);
+            end
+            if numel(tline) >= (s8pos - i*5 - 1)*16 + 14
+                s8data(cursecs+1,satind) = str2double(tline((s8pos-i*5-1)*16+1:(s8pos-i*5-1)*16+14));
+            end
         end
-        end
-          % getting s8
-          if exist('s8pos', 'var')
-        while s8pos > mult5
-            i=i+1;
-            mult5=5*(i+1);
-            tline=fgets(fid);
-        end
-        if numel(tline) >= (s8pos - i*5 - 1)*16 + 14
-            s8data(cursecs+1,satind) = str2double(tline((s8pos-i*5-1)*16+1:(s8pos-i*5-1)*16+14));
-        end
-          end
         while i~=obsl
             tline=fgets(fid);
             i=i+1;
@@ -274,7 +274,7 @@ for satind=1:92
             snrdatat(ind,8) = s6datat(tt);
             snrdatat(ind,9) = s7datat(tt);
             snrdatat(ind,10) = s8datat(tt);
-            
+
         end
     end
     snr_data = [snr_data;snrdatat];
@@ -305,14 +305,14 @@ if ~isempty(snr_data.GPS)
     GPS_data_prn_str = arrayfun(@(x) sprintf('G%02d', x), snr_data.GPS(:,1), 'UniformOutput', false);
     snr_data.GPS = array2table(snr_data.GPS, ...
         'VariableNames', {'GPS_data_prn_num', 'GPS_data_time', 'GPS_azi', ...
-                          'GPS_elv', 'S1', 'S2', 'S5', 'S6', 'S7', 'S8'});
+        'GPS_elv', 'C1', 'C2', 'C5', 'C6', 'C7', 'C8'});
     snr_data.GPS.GPS_data_prn_str = GPS_data_prn_str;
 end
 if ~isempty(snr_data.GLONASS)
     GLONASS_data_prn_str = arrayfun(@(x) sprintf('R%02d', x), snr_data.GLONASS(:,1), 'UniformOutput', false);
     snr_data.GLONASS = array2table(snr_data.GLONASS, ...
         'VariableNames', {'GLONASS_data_prn_num', 'GLONASS_data_time', 'GLONASS_azi', ...
-                          'GLONASS_elv', 'S1', 'S2', 'S5', 'S6', 'S7', 'S8'});
+        'GLONASS_elv', 'C1', 'C2', 'C5', 'C6', 'C7', 'C8'});
     snr_data.GLONASS.GLONASS_data_prn_str = GLONASS_data_prn_str;
 end
 
@@ -321,7 +321,7 @@ if ~isempty(snr_data.GALILEO)
     GALILEO_data_prn_str = arrayfun(@(x) sprintf('E%02d', x), snr_data.GALILEO(:,1), 'UniformOutput', false);
     snr_data.GALILEO = array2table(snr_data.GALILEO, ...
         'VariableNames', {'GALILEO_data_prn_num', 'GALILEO_data_time', 'GALILEO_azi', ...
-                          'GALILEO_elv', 'S1', 'S2', 'S5', 'S6', 'S7', 'S8'});
+        'GALILEO_elv', 'C1', 'C2', 'C5', 'C6', 'C7', 'C8'});
     snr_data.GALILEO.GALILEO_data_prn_str = GALILEO_data_prn_str;
 end
 

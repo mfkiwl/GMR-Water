@@ -1,10 +1,20 @@
-varNames = {'Time','System','BAND','PRN','ROC','MIN_elv','MAX_elv','MEAN_AZI','RH','trop_c'};
-varTypes = {'datetime','string','string','double','double','double','double','double','double','double'};
+RH_file = [settings.Out_path,'/RH_file/',settings.station_name,num2str(tdatenum),'RH_info.mat'];
+if ~exist([settings.Out_path,'/RH_file'], "dir")
+    mkdir([settings.Out_path,'/RH_file'])
+end
+
+% start
+disp([char(datetime(tdatenum,'ConvertFrom','datenum'))])
+
+varNames = {'Time','System','BAND','PRN','ROC','MIN_elv','MAX_elv','MEAN_AZI','RH','trop_c', 'PNR'};
+varTypes = {'datetime','string','string','double','double','double','double','double','double','double','double'};
 RH_info = table('Size',[0,length(varNames)],'VariableTypes',varTypes,'VariableNames',varNames);
 rid   = 0;
+rid_all = 0;
 
-load('MethodsSettings.mat','PNR','WinLSP')
-
+ms = load('MethodsSettings.mat','PNR','WinLSP');
+PNR = ms.PNR;
+WinLSP = ms.WinLSP;
 genTropParameters(tdatenum,staxyz,sta_asl,tide_range);
 for Meth_id = 1:5
     % load Data
@@ -46,6 +56,7 @@ for Meth_id = 1:5
         sat_num = numel(prn);
         for sat = 1:sat_num                                 % Satellite
             cur_sat = prn(sat);
+            
             inverse_indx = cur_data{:,1}==cur_sat;
             inverse_data = cur_data(inverse_indx,:);
             time_a   = inverse_data{:,2};
@@ -63,7 +74,7 @@ for Meth_id = 1:5
                     if cur_band(1) ~= 'S'   % only for snr
                         continue
                     end
-                    time_gap = diff(time_a);
+                    time_gap = abs(diff(time_a));
                     gap_indx = find((time_gap>10*settings.Rinex_dt) == 1);
                     for g = 1:numel(gap_indx)+1
                         if numel(gap_indx) == 0
@@ -93,6 +104,7 @@ for Meth_id = 1:5
                                 try
                                     elv_o = -elv_o;
                                     gap_elv = find(elv_o == findpeaks(elv_o));
+                                    elv_o = -elv_o;
                                 catch
                                     continue
                                 end
@@ -101,10 +113,10 @@ for Meth_id = 1:5
                         for arc_id = 1:arc_num
                             if arc_num ~= 1
                                 if arc_id == 1
-                                    time = time_o(1:gap_elv);
-                                    azi = azi_o(1:gap_elv);
-                                    snr = snr_o(1:gap_elv);
-                                    elv = elv_o(1:gap_elv);
+                                    time = time_o(1:gap_elv-1);
+                                    azi = azi_o(1:gap_elv-1);
+                                    snr = snr_o(1:gap_elv-1);
+                                    elv = elv_o(1:gap_elv-1);
                                 else
                                     time = time_o(gap_elv+1,:);
                                     azi = azi_o(gap_elv+1,:);
@@ -142,6 +154,7 @@ for Meth_id = 1:5
                                     if max(time_win) - min(time_win) < 600
                                         continue
                                     end
+                                    rid_all = rid_all+1;
                                     [valid, RH_info_win] = snr2RH_info(elv_win, snr_win, azi_win, time_win, wave_length, tdatenum, ...
                                         sta_asl, tide_range, ...
                                         cur_sys, cur_band, cur_sat, PNR);
@@ -152,9 +165,10 @@ for Meth_id = 1:5
                                     end
                                 end
                             else % No winlsp
-                                if max(time) - min(time) < 60*30
-                                    continue
-                                end
+                                % if max(time) - min(time) < 60*30
+                                %     continue
+                                % end
+                                rid_all = rid_all+1;
                                 [valid, RH_info_arc] = snr2RH_info(elv, snr, azi, time, wave_length, tdatenum, ...
                                     sta_asl, tide_range, ...
                                     cur_sys, cur_band, cur_sat, PNR);
@@ -162,6 +176,7 @@ for Meth_id = 1:5
                                 if valid
                                     rid = rid + 1; % row id
                                     RH_info(rid,:) = RH_info_arc;
+                                
                                 end
                             end
 
@@ -172,7 +187,7 @@ for Meth_id = 1:5
 
             %% For carrier and pseudorange multi-frequence
             if Meth_id == 3 || Meth_id == 4
-                time_gap = diff(time_a);
+                time_gap = abs(diff(time_a));
                 gap_indx = find((time_gap>10*settings.Rinex_dt) == 1);
                 for g = 1:numel(gap_indx)+1
                     if numel(gap_indx) == 0
@@ -190,7 +205,7 @@ for Meth_id = 1:5
                     azi_o    = inverse_data{indx,3};
                     elv_o  = inverse_data{indx,4};
 
-                    if string(cur_sys) == "GLONASS"
+                    if string(cur_sys) == "GLONASS" && MFC.type == "triple"
                         continue
                     end
                     [M,a,b,cur_band] = Get_combined_observations(Meth_id, cur_sys, inverse_data, indx, cur_sat);
@@ -219,6 +234,7 @@ for Meth_id = 1:5
                             if max(time_win) - min(time_win) < 600
                                 continue
                             end
+                            rid_all = rid_all+1;
                             [valid, RH_info_win] = mp2RH_info(elv_win, M_win, azi_win, time_win, a, b, tdatenum, ...
                                 sta_asl, tide_range, ...
                                 cur_sys, cur_band, cur_sat, Meth_id, PNR);
@@ -229,15 +245,17 @@ for Meth_id = 1:5
                             end
                         end
                     else
-                        if max(time) - min(time) < 60*30
+                        if max(time) - min(time) < 60*15
                             continue
                         end
+                        rid_all = rid_all+1;
                         [valid, RH_info_arc] = mp2RH_info(elv, M, azi, time, a, b,  tdatenum, ...
                             sta_asl, tide_range, ...
                             cur_sys, cur_band, cur_sat, Meth_id, PNR);
                         if valid
                             rid = rid+1;
                             RH_info(rid,:) = RH_info_arc;
+                        
                         end
                     end
 
@@ -251,7 +269,7 @@ for Meth_id = 1:5
                 for group_id = 1:numel(groups)  % frequence band
                     group = groups{group_id};
 
-                    time_gap = diff(time_a);
+                    time_gap = abs(diff(time_a));
                     gap_indx = find((time_gap>10*settings.Rinex_dt) == 1);
                     for g = 1:numel(gap_indx)+1
                         if numel(gap_indx) == 0
@@ -295,6 +313,7 @@ for Meth_id = 1:5
                                 if max(time_win) - min(time_win) < 600
                                     continue
                                 end
+                                rid_all = rid_all+1;
                                 [valid, RH_info_win] = mp2RH_info(elv_win, M_win, azi_win, time_win, a, b, tdatenum, ...
                                     sta_asl, tide_range, ...
                                     cur_sys, cur_band, cur_sat, Meth_id, PNR);
@@ -305,9 +324,10 @@ for Meth_id = 1:5
                                 end
                             end
                         else
-                            if max(time) - min(time) < 60*30
+                            if max(time) - min(time) < 60*15
                                 continue
                             end
+                            rid_all = rid_all+1;
                             [valid, RH_info_arc] = mp2RH_info(elv, M, azi, time, a, b, tdatenum, ...
                                 sta_asl, tide_range, ...
                                 cur_sys, cur_band, cur_sat, Meth_id, PNR);
@@ -325,3 +345,4 @@ for Meth_id = 1:5
 end
 % save the RH_file
 parsave(RH_file,RH_info,'RH_info')
+sprintf('out ratio: %.2f %',100-100*rid/rid_all)

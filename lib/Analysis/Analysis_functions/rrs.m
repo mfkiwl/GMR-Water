@@ -13,16 +13,13 @@ t   = datenum(RH_info_all.Time);
 
 
 time_difference = end_date - start_date+1;
-interval = 6;     % min
+interval = 10;     % min
 loop_interval = interval/(24*60);
 epoc_num = time_difference / loop_interval + 1;
 clear RH_final h_change
 e = 0;
-RH_final = lsq(epoc_num, start_date, interval, RH_info_all, h_initial, h_trop, roc, t, e, h_tidal);
+[RH_final, h_change] = lsq(epoc_num, start_date, interval, RH_info_all, h_initial, h_trop, roc, t, e, h_tidal);
 
-mu       = nanmean(RH_final);
-sigma    = nanstd(RH_final);
-RH_final(abs(RH_final - mu) > 3 * sigma) = nan;
 sea_level_ir = fig_set.sta_asl - RH_final;
 time = datetime(start_date:loop_interval:(end_date+1), 'ConvertFrom','datenum');
 
@@ -30,8 +27,11 @@ time_tide      = fig_set.tidal_info{1};
 sea_level_tide = fig_set.tidal_info{2};
 if fig_set.option
     figure
-    set(gcf, 'Units', 'normalized', 'OuterPosition', [0.1 0.1 0.7 0.5]);
+    set(gcf, 'Units', 'normalized', 'OuterPosition', [0.1 0.1 0.7 0.8]);
     if ~isempty(sea_level_tide)
+        tiledlayout(9,1,'TileSpacing','compact');
+        nexttile([5,1])
+    else
         tiledlayout(7,1,'TileSpacing','compact');
         nexttile([5,1])
     end
@@ -45,7 +45,6 @@ if fig_set.option
     ylabel('Sea level (m)','FontWeight','bold')
     legend
     box on
-
     title('Robust regression strategy','FontWeight','bold','FontSize',18)
 
     if ~isempty(sea_level_tide)
@@ -57,16 +56,20 @@ if fig_set.option
 
         nexttile([2,1])
         plot(time,sea_level_ir- sea_level_tide)
-        xlabel('Time','FontWeight','bold')
-        datetick('x', 'dd-mmm-yyyy', 'keepticks', 'keeplimits')
+        % xlabel('Time','FontWeight','bold')
+        % datetick('x', 'dd-mmm-yyyy', 'keepticks', 'keeplimits')
         ylabel('Residual error (m)','FontWeight','bold')
+        set(gca,'XTickLabel',[])
         xlim([min(time), max(time)])
-    else
-        xlabel('Time','FontWeight','bold')
     end
+    nexttile([2,1])
+    plot(time, h_change)
+    xlabel('Time','FontWeight','bold')
+    datetick('x', 'dd-mmm-yyyy', 'keepticks', 'keeplimits')
+    ylabel('change (m/h)','FontWeight','bold')
+    xlim([min(time), max(time)])
+    xlabel('Time','FontWeight','bold')
 end
-
-RH_final = sea_level_ir;
 
 if ~isempty(sea_level_tide)
     Bias = nanmean(sea_level_ir- sea_level_tide);

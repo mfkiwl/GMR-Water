@@ -106,62 +106,45 @@ for f = 1 : settings.filenumber
             end_time = datetime(end_date+1,'ConvertFrom','datenum');
 
             RH_info_raw = RH_info_all;
-            t = 0;
-            while 1
-                t = t+1;
-                RH_info_all_3sigma = [];
-                i = 0;
-                win_size = days(1/24);
 
-                for win_t = start_time : win_size : end_time
-                    i = i+1;
-                    win_Data = RH_info_all(RH_info_all{:,1} >= win_t & RH_info_all{:,1} < win_t+win_size,:);
-                    std_data = std(win_Data{:,"RH"},'omitnan');
-                    mean_data = mean(win_Data{:,"RH"},'omitnan');
+            RH_info_all_3sigma = [];
+            i = 0;
+            win_size = days(1/24);
 
-                    upper_bound(i) = mean_data + 3 * std_data;
-                    lower_bound(i) = mean_data - 3 * std_data;
-                    %                 fill([win_t, win_t+win_size, win_t+win_size, win_t], ...
-                    %                     [upper_bound(i), upper_bound(i)+win_size, 100, 100], 'r', 'FaceAlpha', 0.1,'EdgeColor','none')
-                    %                 fill([win_t, win_t+win_size, win_t+win_size, win_t], ...
-                    %                     [lower_bound(i), lower_bound(i)+win_size, -100, -100], 'r', 'FaceAlpha', 0.1,'EdgeColor','none')
-                    %                 fill([win_t, win_t+win_size, win_t+win_size, win_t,], ...
-                    %                     [lower_bound(i), lower_bound(i)+win_size, upper_bound(i)+win_size, upper_bound(i)], 'b', 'FaceAlpha', 0.1,'EdgeColor','none')
-                    %
-                    win_Data(win_Data{:,"RH"} > upper_bound(i) | win_Data{:,"RH"} < lower_bound(i),:) = [];
-                    RH_info_all_3sigma = [RH_info_all_3sigma; win_Data];
-                end
+            for win_t = start_time : win_size : end_time
+                i = i+1;
+                win_Data = RH_info_all(RH_info_all{:,1} >= win_t & RH_info_all{:,1} < win_t+win_size,:);
+                win_Data(win_Data.RH == RH_info_all.RH(i), :) = [];
+                std_data = std(win_Data{:,"RH"},'omitnan');
+                mean_data = mean(win_Data{:,"RH"},'omitnan');
 
-                if numel(RH_info_all_3sigma(:,1)) == numel(RH_info_all(:,1)) | t == 3
-                    figure
-                    hold on
-                    t_bound = start_time+win_size/2 : win_size : end_time+win_size/2;
-                    plot(t_bound, upper_bound, 'blue--',DisplayName="upper bound")
-                    plot(t_bound, lower_bound, 'blue:',DisplayName='lower bound')
-                    legend
-                    %             yticks_duration = get(gca, 'YTick');
-                    %             yticks_double = days(yticks_duration);
-                    %             set(gca, 'YTickLabel', num2str(yticks_double', '%.2f'));
-                    %             ylim([days(nanmin(lower_bound)-1),days(nanmax(upper_bound)+1)])
-                    ylabel('RH/m')
-                    xlim([start_time, end_time])
-                    xlabel('Time')
-                    scatter(RH_info_raw{:,"Time"}, RH_info_raw{:,"RH"},'red','filled',DisplayName="outliers")
-                    scatter(RH_info_all_3sigma{:,"Time"}, RH_info_all_3sigma{:,"RH"},'black','filled',DisplayName="valid")
-
-                    box on
-                    title("3 sigma denosing")
-
-                    % save picture
-                    set(gcf, 'Units','normalized','OuterPosition',[0.25,0.25,0.5,0.5])
-                    name = [pic_name,'_3-sigma'];
-                    saveas(gcf, [name,'.fig']);
-                    print(gcf, [name,'.png'], '-dpng', '-r300')
-                    break
-                end
-                RH_info_all = RH_info_all_3sigma;
-                clear RH_info_all_3sigma
+                upper_bound(i) = mean_data + 2 * std_data;
+                lower_bound(i) = mean_data - 2 * std_data;
+                win_Data(win_Data{:,"RH"} > upper_bound(i) | win_Data{:,"RH"} < lower_bound(i),:) = [];
+                RH_info_all_3sigma = [RH_info_all_3sigma; win_Data];
             end
+
+            figure
+            hold on
+            t_bound = start_time+win_size/2 : win_size : end_time+win_size/2;
+            plot(t_bound, upper_bound, 'blue--',DisplayName="upper bound")
+            plot(t_bound, lower_bound, 'blue:',DisplayName='lower bound')
+            legend
+            ylabel('RH/m')
+            xlim([start_time, end_time])
+            xlabel('Time')
+            scatter(RH_info_raw{:,"Time"}, RH_info_raw{:,"RH"},'red','filled',DisplayName="outliers")
+            scatter(RH_info_all_3sigma{:,"Time"}, RH_info_all_3sigma{:,"RH"},'black','filled',DisplayName="valid")
+
+            box on
+            title("3 sigma denosing")
+
+            % save picture
+            set(gcf, 'Units','normalized','OuterPosition',[0.25,0.25,0.5,0.5])
+            name = [pic_name,'_3-sigma'];
+            saveas(gcf, [name,'.fig']);
+            print(gcf, [name,'.png'], '-dpng', '-r300')
+
             clear RH_info_raw
 
             QC_result = [settings.results,'/RH_info/',Final_files{f}(1:end-4),'.txt'];
@@ -178,62 +161,63 @@ for f = 1 : settings.filenumber
         %             avg_data = arrayfun(@(t) mean(data(time(idx) == t)), unique_time);
         %             spline_fit = spline(unique_time, avg_data, datenum(start_time:hours(1):end_time));
         %         end
-    end
 
 
-    %% Display
-    % Azimuth
-    % if settings.azi
-    %     azi = RH_info_all{:,"MEAN_AZI"};
-    %     RH = RH_info_all{:,"RH"};
-    %     scatter(azi, RH, 'filled')
-    % end
 
-    % daily number
-    if settings.day_num
-        start_time = datetime(start_date,'ConvertFrom','datenum');
-        end_time = datetime(end_date,'ConvertFrom','datenum');
-        i = 0;
-        day_num = nan(numel(start_time : days(1) : end_time),4);
-        for t = start_time : days(1) : end_time
-            i = i+1;
-            RH_info_daily = RH_info_all(RH_info_all{:,1} >= t & RH_info_all{:,1} < t+days(1),:);
+        %% Display
+        % Azimuth
+        % if settings.azi
+        %     azi = RH_info_all{:,"MEAN_AZI"};
+        %     RH = RH_info_all{:,"RH"};
+        %     scatter(azi, RH, 'filled')
+        % end
 
-            day_num(i, 1) = numel(RH_info_daily(RH_info_daily{:,"System"}=="GPS",:)) / 11;
-            day_num(i, 2) = numel(RH_info_daily(RH_info_daily{:,"System"}=="GLONASS",:)) / 11;
-            day_num(i, 3) = numel(RH_info_daily(RH_info_daily{:,"System"}=="GALILEO",:)) / 11;
-            day_num(i, 4) = numel(RH_info_daily(RH_info_daily{:,"System"}=="BDS",:)) / 11;
-        end
-        figure
-        hold on
-        for s = 1:5
-            switch s
-                case 1
-                    scatter(start_time : days(1) : end_time, day_num(:,s),'filled',DisplayName="GPS",LineWidth=1.5)
-                case 2
-                    scatter(start_time : days(1) : end_time, day_num(:,s),'filled',DisplayName="GLONASS",LineWidth=1.5)
-                case 3
-                    scatter(start_time : days(1) : end_time, day_num(:,s),'filled',DisplayName="GALILEO",LineWidth=1.5)
-                case 4
-                    scatter(start_time : days(1) : end_time, day_num(:,s),'filled',DisplayName="BDS",LineWidth=1.5)
-                case 5
-                    scatter(start_time : days(1) : end_time, sum(day_num,2),'filled',DisplayName="ALL",LineWidth=1.5)
+        % daily number
+        if settings.day_num
+            start_time = datetime(start_date,'ConvertFrom','datenum');
+            end_time = datetime(end_date,'ConvertFrom','datenum');
+            i = 0;
+            day_num = nan(numel(start_time : days(1) : end_time),4);
+            for t = start_time : days(1) : end_time
+                i = i+1;
+                RH_info_daily = RH_info_all(RH_info_all{:,1} >= t & RH_info_all{:,1} < t+days(1),:);
 
+                day_num(i, 1) = numel(RH_info_daily(RH_info_daily{:,"System"}=="GPS",:)) / 11;
+                day_num(i, 2) = numel(RH_info_daily(RH_info_daily{:,"System"}=="GLONASS",:)) / 11;
+                day_num(i, 3) = numel(RH_info_daily(RH_info_daily{:,"System"}=="GALILEO",:)) / 11;
+                day_num(i, 4) = numel(RH_info_daily(RH_info_daily{:,"System"}=="BDS",:)) / 11;
             end
-        end
-        legend
-        box on
-        grid on
-        axis tight
-        set(gcf, 'Units','normalized','OuterPosition',[0.25,0.25,0.5,0.5])
-        ylabel('Daily Numbers', 'FontWeight','bold')
-        xlabel('Time','FontWeight','bold')
-        xlim([start_time-days(0.25), end_time+days(0.25)])
+            figure
+            hold on
+            for s = 1:5
+                switch s
+                    case 1
+                        scatter(start_time : days(1) : end_time, day_num(:,s),'filled',DisplayName="GPS",LineWidth=1.5)
+                    case 2
+                        scatter(start_time : days(1) : end_time, day_num(:,s),'filled',DisplayName="GLONASS",LineWidth=1.5)
+                    case 3
+                        scatter(start_time : days(1) : end_time, day_num(:,s),'filled',DisplayName="GALILEO",LineWidth=1.5)
+                    case 4
+                        scatter(start_time : days(1) : end_time, day_num(:,s),'filled',DisplayName="BDS",LineWidth=1.5)
+                    case 5
+                        scatter(start_time : days(1) : end_time, sum(day_num,2),'filled',DisplayName="ALL",LineWidth=1.5)
 
-        % save picture
-        name = [pic_name,'_Daily Numbers'];
-        saveas(gcf, [name,'.fig']);
-        print(gcf, [name,'.png'], '-dpng', '-r300')
+                end
+            end
+            legend
+            box on
+            grid on
+            axis tight
+            set(gcf, 'Units','normalized','OuterPosition',[0.25,0.25,0.5,0.5])
+            ylabel('Daily Numbers', 'FontWeight','bold')
+            xlabel('Time','FontWeight','bold')
+            xlim([start_time-days(0.25), end_time+days(0.25)])
+
+            % save picture
+            name = [pic_name,'_Daily Numbers'];
+            saveas(gcf, [name,'.fig']);
+            print(gcf, [name,'.png'], '-dpng', '-r300')
+        end
     end
 
     %% Analysis of different Methdos
@@ -242,7 +226,7 @@ for f = 1 : settings.filenumber
         sea_level_tide = [];
     end
 
-%%%%%%%%%%%%%%%%%%% SNR-Spectral method %%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%% SNR-Spectral method %%%%%%%%%%%%%%%%%%%%%%%%%
     if string(file_info{4}) == "SNR-Spectral.mat" || string(file_info{4}) == "OBS-CP.mat"
         % Excluded Bad frequency points
         for exf = 1:numel(settings.efps)
@@ -312,7 +296,7 @@ for f = 1 : settings.filenumber
             end
         end
 
-%%%%%%%%%%%%%%%% SNR-Inverse modeling %%%%%%%%%%%%%%%%%%
+        %%%%%%%%%%%%%%%% SNR-Inverse modeling %%%%%%%%%%%%%%%%%%
     elseif string(file_info{4}) == "SNR-Inverse.mat"
         time = RH_info_all.Time;
         RH_inverse_modeling = settings.antenna_height - RH_info_all.RH_Inverse;
@@ -380,12 +364,12 @@ for f = 1 : settings.filenumber
         end
 
         set(gcf, 'Units', 'normalized', 'OuterPosition', [0 0 1 1]);
-        
+
         saveas(gcf, [pic_name,'.fig']);
         print(gcf, [pic_name,'.png'], '-dpng', '-r300')
 
 
-%%%%%%%%%%%%%%%%%%% OBS-carrier / pseudo range %%%%%%%%%%%%%%%%%%%%%
+        %%%%%%%%%%%%%%%%%%% OBS-carrier / pseudo range %%%%%%%%%%%%%%%%%%%%%
     else
         Result_display_OBS(RH_info_all, settings, time_tide, sea_level_tide, end_date, start_date, colors);
         % save picture

@@ -98,17 +98,17 @@ for aa = 1:size(allsats,1) %遍历所有卫星
         end
         %%%%%%%
         times=sat2tr(:,4);
-        if size(times,1)<1                                  %无符合时段数
+        if size(times,1)<1                         
             continue
         end
         % to sort satellites which have more than one valid overpass
-        gaps = diff(times(:,1)) > dt*10;                    % 找到分割时间段
+        gaps = diff(times(:,1)) > dt*10;            
         repgaps = sum(gaps) + 1;
         gapids = 1:numel(gaps);
-        gaps=gapids(gaps);                                  % 时间在gaps处分割
-        if repgaps>1                                        % 时间段数大于1
+        gaps=gapids(gaps);                          
+        if repgaps>1                                      
             if ijk==1
-                sat2tr(gaps(ijk)+1:end,:) = [];               % 分割时段
+                sat2tr(gaps(ijk)+1:end,:) = [];               
             elseif ijk>1
                 sat2tr(1:gaps(ijk-1),:)=[];
                 if repgaps>2 && ijk<repgaps
@@ -116,7 +116,7 @@ for aa = 1:size(allsats,1) %遍历所有卫星
                 end
             end
         end
-        if size(sat2tr,1)<3                                 % 时段数太少
+        if size(sat2tr,1)<3                                 
             continue
         end
         if sum(isnan(sat2tr(:,end)))>20
@@ -133,17 +133,17 @@ for aa = 1:size(allsats,1) %遍历所有卫星
             else
                 tmp=0;
             end
-            if tmp~=fwd                                     % 非递增
+            if tmp~=fwd                                 
                 times(a:end)=[];
                 sat2tr(a:end,:)=[];
                 break
             end
         end
         if fwd==0
-            sat2tr=flipud(sat2tr);                          % 非递增则翻转
+            sat2tr=flipud(sat2tr);                    
         end
 
-        if abs(sat2tr(end,4)-sat2tr(1,4)) < 300             % 时段太少
+        if abs(sat2tr(end,4)-sat2tr(1,4)) < 300         
             continue
         end
 
